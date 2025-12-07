@@ -1,0 +1,63 @@
+<?php
+session_start();
+date_default_timezone_set('Asia/Jakarta');
+
+// Pastikan Anda sudah COPY folder vendor dari spencal ke valselt-id
+require __DIR__ . '/vendor/autoload.php'; 
+
+use Aws\S3\S3Client;
+use Aws\Exception\AwsException;
+use PHPMailer\PHPMailer\PHPMailer;
+
+// --- DATABASE PUSAT (VALSELT ID) ---
+$db_host = 'MYSQL_HOST';
+$db_port = MYSQL_PORT;
+$db_user = 'MYSQL_USERNAME';
+$db_pass = 'MYSQL_PASSWROD';
+$db_name = 'MYSQL_DATABASE'; // Pastikan DB ini sudah dibuat dan tabel users ada disana
+
+$conn = new mysqli($db_host, $db_user, $db_pass, $db_name, $db_port);
+if ($conn->connect_error) die("Koneksi Valselt ID Gagal: " . $conn->connect_error);
+
+// --- MINIO ---
+$minio_endpoint = 'MINIO_ENDPOINT';
+$minio_key      = 'MINIO_USERNAME';
+$minio_secret   = 'MINIO_PASSWORD';
+$minio_bucket   = 'MINIO_BUCKET'; 
+
+try {
+    $s3 = new S3Client([
+        'version' => 'latest', 'region' => 'us-east-1', 'endpoint' => $minio_endpoint,
+        'use_path_style_endpoint' => true,
+        'credentials' => ['key' => $minio_key, 'secret' => $minio_secret],
+    ]);
+} catch (Exception $e) { die("Gagal MinIO: " . $e->getMessage()); }
+
+// --- CREDENTIALS LAIN ---
+$recaptcha_site_key   = 'RECAPTCHA_SITE_KEY'; 
+$recaptcha_secret_key = 'RECAPTCHA_SITE_KEY';
+
+$mail_host = 'smtp.gmail.com';
+$mail_port = 587; 
+$mail_user = 'EMAIL_SMTP'; 
+$mail_pass = 'EMAIL_APP_PASSWORD';  
+$mail_from_name = 'EMAIL_SENDER_NAME';
+
+function sendOTPEmail($toEmail, $otp) {
+    global $mail_host, $mail_port, $mail_user, $mail_pass, $mail_from_name;
+    $mail = new PHPMailer(true);
+    try {
+        $mail->isSMTP();
+        $mail->Host = $mail_host; $mail->SMTPAuth = true;
+        $mail->Username = $mail_user; $mail->Password = $mail_pass;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; $mail->Port = $mail_port;
+        $mail->setFrom($mail_user, $mail_from_name);
+        $mail->addAddress($toEmail);
+        $mail->isHTML(true);
+        $mail->Subject = "Kode Verifikasi Valselt ID";
+        $mail->Body    = "<h3>Kode OTP: $otp</h3>";
+        $mail->send();
+        return true;
+    } catch (Exception $e) { return false; }
+}
+?>
