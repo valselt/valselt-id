@@ -370,3 +370,58 @@ a:hover { color: var(--primary); }
 /* Cropper */
 .crop-container { max-height: 350px; background: #111; border-radius: 12px; overflow: hidden; }
 #hidden-file-input { display: none; }
+
+/* ============================================================
+   ENTRANCE ANIMATIONS
+   (Animasi Masuk saat Web di-Load)
+============================================================ */
+
+/* 1. Definisi Gerakan: Muncul dari bawah ke atas */
+@keyframes fadeInUp {
+    from {
+        opacity: 0;
+        transform: translateY(30px); /* Mulai dari 30px di bawah */
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0); /* Kembali ke posisi asal */
+    }
+}
+
+/* 2. Definisi Gerakan: Muncul perlahan (Fade In) */
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* --- TERAPKAN ANIMASI --- */
+
+/* 1. Panel Kiri (Gambar & Quote) muncul perlahan */
+.left-pane {
+    animation: fadeIn 1.5s ease-out;
+}
+
+/* 2. Quote Badge & Teks di Kiri (Ada delay sedikit biar elegan) */
+.left-content .hero-text {
+    opacity: 0; /* Sembunyi dulu */
+    animation: fadeInUp 1s ease-out forwards; /* Forwards = diam di posisi akhir */
+    animation-delay: 0.3s; /* Tunggu 0.3 detik baru muncul */
+}
+
+/* 3. Kotak Form (Kanan) muncul dari bawah */
+.auth-box {
+    opacity: 0; /* Sembunyi dulu */
+    animation: fadeInUp 0.8s ease-out forwards;
+    animation-delay: 0.1s; /* Muncul sedikit setelah background */
+}
+
+/* 4. Khusus Halaman Dashboard (Profile Card) */
+.profile-card {
+    opacity: 0;
+    animation: fadeInUp 0.8s ease-out forwards;
+}
+
+/* 5. Khusus Popup (Supaya tidak kaget) */
+.popup-box {
+    animation: fadeInUp 0.4s ease-out;
+}
