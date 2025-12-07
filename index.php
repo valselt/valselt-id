@@ -1,5 +1,4 @@
 <?php
-// HAPUS session_start(); DISINI (karena sudah ada di config.php)
 require 'config.php';
 
 if (!isset($_SESSION['valselt_user_id'])) {
@@ -8,13 +7,12 @@ if (!isset($_SESSION['valselt_user_id'])) {
 
 $user_id = $_SESSION['valselt_user_id'];
 
-// --- LOGIC 1: UPDATE PROFILE ---
+// --- UPDATE PROFILE LOGIC ---
 if (isset($_POST['update_profile'])) {
     $new_username = htmlspecialchars($_POST['username']);
     $new_email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     $new_pass = $_POST['password'];
     
-    // --- UPDATE FOTO PROFIL (VIA BASE64 CROPPER) ---
     if (!empty($_POST['cropped_image'])) {
         $data = $_POST['cropped_image'];
         list($type, $data) = explode(';', $data);
@@ -30,7 +28,6 @@ if (isset($_POST['update_profile'])) {
             imagedestroy($image);
 
             $timestamp = date('Y-m-d_H-i-s');
-            // Path penyimpanan di MinIO
             $s3_key = "photoprofile/{$timestamp}_{$user_id}.webp";
 
             try {
@@ -57,14 +54,14 @@ if (isset($_POST['update_profile'])) {
         $conn->query("UPDATE users SET password='$hash' WHERE id='$user_id'");
     }
     
-    $_SESSION['valselt_username'] = $new_username; // Update session
+    $_SESSION['valselt_username'] = $new_username;
     $_SESSION['popup_status'] = 'success';
     $_SESSION['popup_message'] = 'Profil berhasil diperbarui!';
     header("Location: index.php");
     exit();
 }
 
-// --- LOGIC 2: HAPUS AKUN ---
+// --- HAPUS AKUN ---
 if (isset($_POST['delete_account'])) {
     $conn->query("DELETE FROM users WHERE id='$user_id'");
     session_destroy();
@@ -80,78 +77,40 @@ $user_data = $u_res->fetch_assoc();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Valselt ID</title>
+    <title>Akun Saya - Valselt ID</title>
     <link rel="icon" type="image/png" href="https://cdn.ivanaldorino.web.id/valselt/valselt_favicon.png">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
-    
-    <style>
-        /* Override Style untuk Layout Tanpa Sidebar */
-        body { background-color: #f8fafc; font-family: 'DM Sans', sans-serif; display: block; height: auto; }
-        .valselt-container { max-width: 800px; margin: 50px auto; padding: 20px; }
-        .valselt-header { text-align: center; margin-bottom: 40px; }
-        .valselt-brand { font-size: 2rem; font-weight: 800; color: #4f46e5; }
-        .valselt-brand span { color: #1e293b; }
-        
-        .profile-card { background: white; border-radius: 16px; padding: 40px; box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); border: 1px solid #e2e8f0; }
-        
-        .profile-header-section { display: flex; flex-direction: column; align-items: center; margin-bottom: 30px; }
-        .avatar-wrapper { position: relative; width: 120px; height: 120px; margin-bottom: 15px; }
-        .avatar-img { width: 100%; height: 100%; border-radius: 50%; object-fit: cover; border: 4px solid #e2e8f0; }
-        .avatar-placeholder { width: 100%; height: 100%; border-radius: 50%; background: #4f46e5; color: white; display: flex; align-items: center; justify-content: center; font-size: 3rem; font-weight: bold; border: 4px solid #e2e8f0; }
-        
-        .btn-edit-avatar { 
-            position: absolute; bottom: 0; right: 0; 
-            background: #1e293b; color: white; 
-            width: 36px; height: 36px; border-radius: 50%; 
-            display: flex; align-items: center; justify-content: center; 
-            cursor: pointer; transition: 0.2s; border: 2px solid white;
-        }
-        .btn-edit-avatar:hover { background: #4f46e5; }
-
-        /* Form Styling */
-        .form-grid { display: grid; gap: 20px; }
-        .btn-logout { 
-            display: block; width: 100%; text-align: center; padding: 12px; margin-top: 20px; 
-            background: #fee2e2; color: #991b1b; border-radius: 8px; font-weight: 600; text-decoration: none; 
-        }
-        .btn-logout:hover { background: #fecaca; }
-        
-        /* Cropper Modal */
-        .crop-container { height: 300px; background: #333; overflow: hidden; margin-bottom: 20px; border-radius: 8px; }
-        #hidden-file-input { display: none; }
-    </style>
 </head>
-<body>
-
-<div class="valselt-container">
+<body style="background:#f9fafb;"> <div class="valselt-container">
     <div class="valselt-header">
-        <div class="valselt-brand">valselt<span>.id</span></div>
-        <p style="color:#64748b;">Pusat Pengaturan Akun</p>
+        <img src="https://cdn.ivanaldorino.web.id/valselt/valselt_black.png" alt="Valselt" class="logo-dashboard">
+        <p style="color:var(--text-muted);">Pusat Pengaturan Akun</p>
     </div>
 
     <div class="profile-card">
         <form action="index.php" method="POST" id="profileForm">
             <input type="hidden" name="cropped_image" id="cropped_image_data">
 
-            <div class="profile-header-section">
+            <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:40px;">
                 <div class="avatar-wrapper">
                     <?php if($user_data['profile_pic']): ?>
-                        <img src="<?php echo $user_data['profile_pic']; ?>" id="main-preview" class="avatar-img">
+                        <img src="<?php echo $user_data['profile_pic']; ?>" id="main-preview" class="avatar-img" style="width:100%; height:100%; object-fit:cover;">
                     <?php else: ?>
-                        <div id="main-preview-placeholder" class="avatar-placeholder">
+                        <div id="main-preview-placeholder" class="avatar-placeholder" style="width:100%; height:100%; display:flex; align-items:center; justify-content:center;">
                             <?php echo strtoupper(substr($user_data['username'], 0, 2)); ?>
                         </div>
-                        <img src="" id="main-preview" class="avatar-img" style="display:none;">
+                        <img src="" id="main-preview" class="avatar-img" style="display:none; width:100%; height:100%; object-fit:cover;">
                     <?php endif; ?>
                     
-                    <div class="btn-edit-avatar" onclick="document.getElementById('hidden-file-input').click()">
+                    <div class="btn-edit-avatar" onclick="document.getElementById('hidden-file-input').click()" 
+                         style="position:absolute; bottom:0; right:0; width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; color:white; cursor:pointer;">
                         <i class='bx bx-camera'></i>
                     </div>
                 </div>
-                <h2 style="margin:0; color:#1e293b;"><?php echo htmlspecialchars($user_data['username']); ?></h2>
-                <p style="margin:5px 0 0 0; color:#64748b; font-size:0.9rem;"><?php echo htmlspecialchars($user_data['email']); ?></p>
+                <h2 style="font-family:var(--font-serif); font-size:2rem; font-weight:400; color:var(--text-main);"><?php echo htmlspecialchars($user_data['username']); ?></h2>
+                <p style="color:var(--text-muted);"><?php echo htmlspecialchars($user_data['email']); ?></p>
             </div>
 
             <input type="file" id="hidden-file-input" accept="image/png, image/jpeg, image/jpg">
@@ -168,7 +127,7 @@ $user_data = $u_res->fetch_assoc();
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Password Baru <span style="font-weight:400; color:#94a3b8;">(Kosongkan jika tidak ganti)</span></label>
+                    <label class="form-label">Password Baru <span style="font-weight:400; color:var(--text-muted); font-size:0.8rem;">(Opsional)</span></label>
                     <input type="password" name="password" class="form-control" placeholder="******">
                 </div>
 
@@ -176,16 +135,16 @@ $user_data = $u_res->fetch_assoc();
             </div>
         </form>
 
-        <hr style="border:0; border-top:1px solid #e2e8f0; margin:30px 0;">
+        <hr style="border:0; border-top:1px solid #e5e7eb; margin:40px 0;">
 
         <div style="text-align:center;">
-             <form method="POST" onsubmit="return confirm('Yakin ingin menghapus akun? Ini permanen!');">
-                <button type="submit" name="delete_account" style="background:none; border:none; color:#ef4444; font-weight:600; cursor:pointer; font-size:0.9rem;">
+             <form method="POST" onsubmit="return confirm('Yakin ingin menghapus akun? Ini permanen!');" style="margin-bottom:15px;">
+                <button type="submit" name="delete_account" style="background:none; border:none; color:var(--danger); font-weight:600; cursor:pointer; font-family:var(--font-sans);">
                     <i class='bx bx-trash'></i> Hapus Akun Saya Permanen
                 </button>
             </form>
             
-            <a href="logout.php" class="btn-logout">Keluar / Logout</a>
+            <a href="logout.php" class="btn btn-logout" style="display:inline-block; text-decoration:none; padding:10px 20px; border-radius:8px;">Keluar / Logout</a>
         </div>
     </div>
 </div>
@@ -199,23 +158,20 @@ $user_data = $u_res->fetch_assoc();
             <img id="image-to-crop" style="max-width: 100%; display: block;">
         </div>
 
-        <div style="display:flex; gap:10px;">
-            <button type="button" onclick="closeCropModal()" class="popup-btn" style="background:#f1f5f9; color:#333;">Batal</button>
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button type="button" onclick="closeCropModal()" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
             <button type="button" onclick="cropImage()" class="popup-btn success">Selesai</button>
         </div>
     </div>
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
-
 <script>
-    // --- LOGIC CROPPER JS ---
     let cropper;
     const fileInput = document.getElementById('hidden-file-input');
     const imageToCrop = document.getElementById('image-to-crop');
     const cropModal = document.getElementById('cropModal');
 
-    // 1. Saat file dipilih
     fileInput.addEventListener('change', function(e) {
         const files = e.target.files;
         if (files && files.length > 0) {
@@ -224,28 +180,23 @@ $user_data = $u_res->fetch_assoc();
             
             reader.onload = function(e) {
                 imageToCrop.src = e.target.result;
-                // Buka Modal
                 cropModal.style.display = 'flex';
                 setTimeout(() => cropModal.style.opacity = '1', 10);
 
                 if(cropper) cropper.destroy();
                 cropper = new Cropper(imageToCrop, {
-                    aspectRatio: 1, // Kotak
-                    viewMode: 1,
-                    autoCropArea: 1
+                    aspectRatio: 1, viewMode: 1, autoCropArea: 1
                 });
             };
             reader.readAsDataURL(file);
         }
-        this.value = null; // Reset input
+        this.value = null;
     });
 
-    // 2. Saat tombol Selesai ditekan
     function cropImage() {
         const canvas = cropper.getCroppedCanvas({ width: 300, height: 300 });
         const base64Image = canvas.toDataURL("image/webp");
 
-        // Update Preview
         const mainPreview = document.getElementById('main-preview');
         const placeholder = document.getElementById('main-preview-placeholder');
         
@@ -253,9 +204,7 @@ $user_data = $u_res->fetch_assoc();
         mainPreview.style.display = 'block';
         if(placeholder) placeholder.style.display = 'none';
 
-        // Masukkan data ke Hidden Input
         document.getElementById('cropped_image_data').value = base64Image;
-
         closeCropModal();
     }
 

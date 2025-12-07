@@ -1,20 +1,27 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@100..900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter+Tight:ital,wght@0,100..900;1,100..900&display=swap');
 
 /* ============================================================
    ROOT VARIABLES & GLOBAL RESET
 ============================================================ */
 :root {
-    --bg-light: #f1f5f9;
-    --card-bg: #ffffff;
-    --primary: #4f46e5;
-    --primary-hover: #4338ca;
-    --text-dark: #1e293b;
-    --text-muted: #64748b;
+    --font-serif: "Instrument Serif", serif;
+    --font-sans: "Inter Tight", sans-serif;
+    
+    --bg-light: #ffffff;
+    --input-bg: #f3f4f6; /* Abu-abu sangat muda untuk input */
+    
+    --primary: #000000; /* Hitam pekat sesuai referensi */
+    --primary-hover: #333333;
+    
+    --text-main: #111827;
+    --text-muted: #6b7280;
+    
     --danger: #ef4444;
     --success: #22c55e;
+    
     --radius-md: 12px;
     --radius-sm: 8px;
-    --shadow: 0 4px 6px -1px rgba(0,0,0,0.1);
+    --radius-pill: 50px;
 }
 
 * {
@@ -24,81 +31,249 @@
 }
 
 body {
-    font-family: 'DM Sans', sans-serif;
+    font-family: var(--font-sans);
     background: var(--bg-light);
-    color: var(--text-dark);
+    color: var(--text-main);
+    overflow-x: hidden;
 }
 
-a { text-decoration: none; color: inherit; }
+a { text-decoration: none; color: inherit; transition: 0.2s; }
+a:hover { color: var(--primary); }
 
 /* ============================================================
-   FORMS & BUTTONS
+   FORMS & INPUTS (Gaya Minimalis)
 ============================================================ */
-.form-group { margin-bottom: 15px; }
-.form-label { display: block; margin-bottom: 8px; font-weight: 600; color: var(--text-dark); }
+.form-group { margin-bottom: 20px; }
+
+.form-label { 
+    display: block; 
+    margin-bottom: 8px; 
+    font-weight: 500; 
+    font-size: 0.95rem;
+    color: var(--text-main); 
+}
 
 .form-control {
     width: 100%;
-    padding: 12px 15px;
-    border: 1px solid #e2e8f0;
+    padding: 14px 16px;
+    border: 1px solid transparent; /* Border transparan default */
     border-radius: var(--radius-sm);
-    background: #f8fafc;
-    transition: 0.2s;
-    font-size: 0.95rem;
+    background: var(--input-bg);
+    font-family: var(--font-sans);
+    font-size: 1rem;
+    color: var(--text-main);
+    transition: all 0.3s ease;
 }
 
 .form-control:focus {
-    border-color: var(--primary);
-    background: white;
-    box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+    background: #ffffff;
+    border-color: #e5e7eb;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
     outline: none;
 }
 
+/* BUTTONS */
 .btn {
     width: 100%;
-    padding: 12px;
+    padding: 14px;
     border: none;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-sm); /* Atau radius-pill jika ingin bulat lonjong */
     cursor: pointer;
     transition: 0.3s;
+    font-family: var(--font-sans);
     font-weight: 600;
+    font-size: 1rem;
 }
 
-.btn-primary { background: var(--primary); color: white; }
-.btn-primary:hover { background: var(--primary-hover); }
+.btn-primary { 
+    background: var(--primary); 
+    color: white; 
+}
+.btn-primary:hover { 
+    background: var(--primary-hover); 
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
 
 /* ============================================================
-   AUTH PAGE (login, register, verify)
+   NEW SPLIT LAYOUT (LOGIN & REGISTER)
 ============================================================ */
-.auth-container {
+.split-screen {
+    display: flex;
     height: 100vh;
+    width: 100%;
+    overflow: hidden;
+}
+
+/* KIRI: IMAGE & QUOTE */
+.left-pane {
+    flex: 1;
+    background-color: #000;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    padding: 60px;
+    color: white;
+    overflow: hidden;
+}
+
+/* Background Image Abstrak */
+.left-pane-bg {
+    position: absolute;
+    top: 0; left: 0; width: 100%; height: 100%;
+    /* Ganti URL ini dengan gambar abstrak pilihan Anda jika ada */
+    background: url('https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=2564&auto=format&fit=crop') no-repeat center center;
+    background-size: cover;
+    opacity: 0.8;
+    z-index: 1;
+    filter: contrast(1.1) brightness(0.8);
+}
+
+.left-content {
+    position: relative;
+    z-index: 2;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+}
+
+.quote-badge {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-left: 2px solid rgba(255,255,255,0.5);
+    padding-left: 15px;
+    margin-bottom: 20px;
+    display: inline-block;
+}
+
+.hero-text h1 {
+    font-family: var(--font-serif);
+    font-size: 4.5rem;
+    line-height: 1.1;
+    font-weight: 400;
+    margin-bottom: 20px;
+}
+
+.hero-text p {
+    font-size: 1rem;
+    opacity: 0.8;
+    max-width: 400px;
+    line-height: 1.6;
+}
+
+/* KANAN: FORM */
+.right-pane {
+    flex: 1;
+    background: white;
     display: flex;
     align-items: center;
     justify-content: center;
-}
-
-.auth-card {
-    background: var(--card-bg);
-    width: 100%;
-    max-width: 450px;
     padding: 40px;
-    border-radius: var(--radius-md);
-    box-shadow: var(--shadow);
-    text-align: center;
+    position: relative;
 }
 
-.auth-brand {
-    font-size: 2rem;
-    font-weight: 800;
+.auth-box {
+    width: 100%;
+    max-width: 420px;
+}
+
+.auth-header {
+    margin-bottom: 40px;
+    text-align: left; /* Referensi rata kiri */
+}
+
+.logo-auth {
+    height: 35px; /* Sesuaikan ukuran logo */
+    margin-bottom: 30px;
+}
+
+.auth-header h2 {
+    font-family: var(--font-serif);
+    font-size: 2.8rem;
+    font-weight: 400;
+    color: var(--text-main);
     margin-bottom: 10px;
 }
-.auth-title { color: var(--text-muted); margin-bottom: 25px; }
+
+.auth-header p {
+    color: var(--text-muted);
+}
+
+/* Link kecil (Lupa pass, register) */
+.auth-links {
+    margin-top: 25px;
+    text-align: center;
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+.auth-links a {
+    font-weight: 600;
+    color: var(--primary);
+}
 
 /* ============================================================
-   INPUT VALIDATION ICONS (EMAIL / USERNAME CHECKER)
+   RESPONSIVE (MOBILE)
+============================================================ */
+@media (max-width: 900px) {
+    .split-screen { flex-direction: column; height: auto; min-height: 100vh; }
+    .left-pane { display: none; } /* Hide gambar di HP agar fokus ke form */
+    .right-pane { padding: 40px 20px; height: 100vh; }
+    .auth-header h2 { font-size: 2.5rem; }
+}
+
+/* ============================================================
+   DASHBOARD STYLE (index.php) - Adjusted
+============================================================ */
+.valselt-container { max-width: 800px; margin: 60px auto; padding: 20px; }
+.valselt-header { text-align: center; margin-bottom: 50px; }
+.logo-dashboard { height: 40px; margin-bottom: 10px; }
+
+.profile-card { 
+    background: white; 
+    border-radius: 24px; 
+    padding: 50px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.05); 
+    border: 1px solid #f3f4f6; 
+}
+
+.avatar-wrapper { position: relative; width: 130px; height: 130px; margin-bottom: 20px; }
+.avatar-img, .avatar-placeholder { 
+    border-radius: 50%; 
+    border: 4px solid white; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.1); 
+}
+.avatar-placeholder { background: var(--primary); color: white; font-family: var(--font-serif); font-size: 3rem; }
+
+.btn-edit-avatar {
+    background: var(--text-main);
+    border: 3px solid white;
+}
+.btn-edit-avatar:hover { background: var(--primary); }
+
+.btn-logout {
+    background: #fef2f2;
+    color: #991b1b;
+}
+.btn-logout:hover { background: #fee2e2; }
+
+
+/* ... CSS Lainnya ... */
+
+/* ============================================================
+   VALIDATION ICONS (FIXED)
 ============================================================ */
 .input-wrapper {
     position: relative;
+    width: 100%;
+}
+
+.input-wrapper .form-control {
+    width: 100%;
+    padding-right: 45px; /* Memberi ruang agar teks tidak menabrak ikon */
 }
 
 .validation-icon {
@@ -106,17 +281,22 @@ a { text-decoration: none; color: inherit; }
     right: 15px;
     top: 50%;
     transform: translateY(-50%);
-    font-size: 1.5rem;
+    font-size: 1.4rem;
+    
+    /* DEFAULT: HILANG (Jangan pakai !important agar bisa diubah JS) */
     display: none;
+    
     pointer-events: none;
+    z-index: 10;
 }
 
-.validation-icon.valid { color: var(--success); }
-.validation-icon.invalid { color: var(--danger); }
+.validation-icon.valid { color: var(--success); }    /* Hijau */
+.validation-icon.invalid { color: var(--danger); }   /* Merah */
+.validation-icon.loading-icon { color: var(--text-muted); }
 
+/* Animasi Putar Loading */
 .loading-icon {
-    color: var(--text-muted);
-    animation: spin 0.8s linear infinite;
+    animation: spin 1s linear infinite;
 }
 
 @keyframes spin {
@@ -124,11 +304,11 @@ a { text-decoration: none; color: inherit; }
 }
 
 /* ============================================================
-   PASSWORD REQUIREMENTS BOX (Register)
+   PASSWORD REQUIREMENTS & CAPTCHA
 ============================================================ */
 .password-requirements {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
     border-radius: var(--radius-sm);
     font-size: 0.85rem;
     overflow: hidden;
@@ -137,159 +317,56 @@ a { text-decoration: none; color: inherit; }
     padding: 0 12px;
     transition: all 0.4s;
 }
-
 .password-requirements.show {
     max-height: 200px;
     opacity: 1;
     padding: 12px;
     margin-top: 8px;
 }
-
-.req-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 6px;
-    transition: 0.2s;
-}
-.req-item i { margin-right: 8px; }
 .req-item.valid { color: var(--success); font-weight: 600; }
 .req-item.invalid { color: var(--text-muted); }
 
-/* ============================================================
-   CAPTCHA WRAPPER
-============================================================ */
-.captcha-wrapper {
-    display: flex;
-    justify-content: center;
-    margin: 20px 0;
-}
+.captcha-wrapper { display: flex; justify-content: flex-start; margin: 20px 0; }
 
 /* ============================================================
-   CUSTOM POPUP (popupcustom.php)
+   CUSTOM POPUP
 ============================================================ */
 .popup-overlay {
-    position: fixed;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
-    background: rgba(15,23,42,0.6);
-    backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(5px);
+    display: flex; align-items: center; justify-content: center; z-index: 9999;
     animation: fadeIn 0.3s;
-    z-index: 9999;
 }
-
 .popup-box {
-    background: white;
-    padding: 30px;
-    width: 90%;
-    max-width: 400px;
-    border-radius: 16px;
-    text-align: center;
-    animation: scaleIn 0.25s ease-out;
+    background: white; padding: 40px; width: 90%; max-width: 400px;
+    border-radius: 20px; text-align: center;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
 }
-
-.popup-icon-box {
-    width: 70px; height: 70px;
-    border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-    margin: 0 auto 20px auto;
-    font-size: 3rem;
-}
-
-.popup-icon-box.success { background: #dcfce7; color: #22c55e; }
-.popup-icon-box.error { background: #fee2e2; color: #ef4444; }
-.popup-icon-box.warning { background: #fef9c3; color: #ca8a04; }
-
-.popup-title { font-size: 1.4rem; font-weight: 700; margin-bottom: 10px; }
-.popup-message { color: var(--text-muted); margin-bottom: 20px; }
-
-.popup-btn {
-    padding: 12px;
-    border-radius: 8px;
-    border: none;
-    font-weight: 600;
-    cursor: pointer;
-    width: 100%;
-}
-
+.popup-title { font-family: var(--font-serif); font-size: 1.8rem; margin-bottom: 10px; }
 .popup-btn.success { background: var(--primary); color: white; }
-.popup-btn.error { background: #f1f5f9; }
-.popup-btn.warning { background: #ca8a04; color: white; }
-
-@keyframes fadeIn { from {opacity:0;} to {opacity:1;} }
-@keyframes scaleIn { from {transform:scale(0.85);} to {transform:scale(1);} }
+.popup-btn.error { background: #f3f4f6; color: var(--text-main); }
+.popup-btn.warning { background: #fef08a; color: #854d0e; }
 
 /* ============================================================
-   LOGIN → "ACCOUNT CHOOSER" STYLE
+   SSO / ACCOUNT CHOOSER
 ============================================================ */
 .account-chooser-card {
-    border: 1px solid #e2e8f0;
-    padding: 15px;
-    border-radius: 8px;
+    border: 1px solid #e5e7eb;
+    padding: 20px;
+    border-radius: 16px;
     text-align: center;
-    background: #f8fafc;
-    transition: 0.2s;
+    background: #f9fafb;
     cursor: pointer;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
     margin-bottom: 20px;
-
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* CENTER KAN ANAK2NYA */
-    justify-content: center;
+}
+.account-chooser-card:hover { border-color: var(--primary); background: white; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+.ac-avatar { width: 70px; height: 70px; margin-bottom: 15px; }
+.btn-continue { 
+    background: var(--primary); color: white; 
+    padding: 14px; border-radius: var(--radius-sm); border: none; width: 100%; font-weight: 600;
 }
 
-
-.account-chooser-card:hover {
-    border-color: var(--primary);
-    background: #eef2ff;
-}
-
-.ac-avatar {
-    width: 60px; height: 60px;
-    border-radius: 50%;
-    object-fit: cover;
-    margin-bottom: 10px;
-    background: var(--primary);
-    color: white;
-    display: flex; align-items: center; justify-content: center;
-    font-weight: bold;
-}
-
-.ac-username { font-size: 1.1rem; font-weight: 700; }
-.ac-email { color: var(--text-muted); font-size: 0.9rem; }
-
-.btn-continue {
-    background: var(--primary);
-    color: white;
-    padding: 12px;
-    border-radius: 8px;
-    border: none;
-    width: 100%;
-    font-weight: 600;
-    display: flex;
-    justify-content: center;
-    gap: 6px;
-}
-.btn-continue:hover { background: var(--primary-hover); }
-
-.link-switch-account {
-    display: block;
-    margin-top: 15px;
-    font-size: 0.9rem;
-    color: var(--text-muted);
-}
-
-/* ============================================================
-   CROPPER MODAL
-============================================================ */
-.crop-container {
-    max-height: 350px;
-    background: #333;
-    overflow: hidden;
-    border-radius: 8px;
-}
-
-/* HIDDEN FILE INPUT */
+/* Cropper */
+.crop-container { max-height: 350px; background: #111; border-radius: 12px; overflow: hidden; }
 #hidden-file-input { display: none; }

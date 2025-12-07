@@ -3,14 +3,12 @@ require 'config.php';
 
 header('Content-Type: application/json');
 
-// Terima data JSON dari Javascript
 $data = json_decode(file_get_contents('php://input'), true);
 
 if (isset($data['type']) && isset($data['value'])) {
     $type = $data['type']; // 'username' atau 'email'
     $value = $conn->real_escape_string($data['value']);
     
-    // Pastikan hanya mengecek kolom yang valid
     if ($type !== 'username' && $type !== 'email') {
         echo json_encode(['status' => 'error']);
         exit;
@@ -20,10 +18,10 @@ if (isset($data['type']) && isset($data['value'])) {
     $result = $conn->query($query);
 
     if ($result->num_rows > 0) {
-        // Sudah ada (Tidak Tersedia)
+        // SUDAH ADA DI DB -> TAKEN -> MUNCUL SILANG (Invalid)
         echo json_encode(['status' => 'taken']);
     } else {
-        // Belum ada (Tersedia)
+        // TIDAK ADA DI DB -> AVAILABLE -> MUNCUL CENTANG (Valid)
         echo json_encode(['status' => 'available']);
     }
 } else {
