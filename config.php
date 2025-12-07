@@ -23,7 +23,7 @@ if ($conn->connect_error) die("Koneksi Valselt ID Gagal: " . $conn->connect_erro
 $minio_endpoint = 'https://cdn.ivanaldorino.web.id/';
 $minio_key      = 'admin';
 $minio_secret   = 'aldorino04';
-$minio_bucket   = 'spencal'; 
+$minio_bucket   = 'valselt'; 
 
 try {
     $s3 = new S3Client([
