@@ -152,33 +152,33 @@ if (isset($_POST['register'])) {
     </div>
     
     <script>
-        // --- LOGIC VALIDASI INPUT ---
+        // --- LOGIC VALIDASI INPUT (REVISED) ---
 
-        // Fungsi Sentral untuk Mengatur Ikon
-        // state options: 'hidden', 'loading', 'valid', 'invalid'
+        // Fungsi ini menjamin HANYA 1 ikon yang muncul
         function updateIconState(type, state) {
-            const loading = document.getElementById(type + '-loading');
-            const check = document.getElementById(type + '-check');
-            const cross = document.getElementById(type + '-cross');
+            // Ambil elemen berdasarkan tipe (email/username)
+            const icons = {
+                loading: document.getElementById(type + '-loading'),
+                valid:   document.getElementById(type + '-check'),
+                invalid: document.getElementById(type + '-cross')
+            };
 
-            // 1. Reset: Sembunyikan SEMUA ikon terlebih dahulu
-            loading.style.display = 'none';
-            check.style.display = 'none';
-            cross.style.display = 'none';
+            // 1. Matikan SEMUA ikon dulu (Reset)
+            // Ini mencegah ikon bertumpuk (misal: loading dan silang muncul bersamaan)
+            if(icons.loading) icons.loading.style.display = 'none';
+            if(icons.valid)   icons.valid.style.display = 'none';
+            if(icons.invalid) icons.invalid.style.display = 'none';
 
-            // 2. Tampilkan sesuai state yang diminta
-            if (state === 'loading') {
-                loading.style.display = 'block';
-            } else if (state === 'valid') {
-                check.style.display = 'block';
-            } else if (state === 'invalid') {
-                cross.style.display = 'block';
-            }
-            // Jika state === 'hidden', tidak ada yang dinyalakan (tetap reset)
+            // 2. Nyalakan yang diminta
+            if (state === 'loading' && icons.loading) icons.loading.style.display = 'block';
+            if (state === 'valid' && icons.valid)     icons.valid.style.display = 'block';
+            if (state === 'invalid' && icons.invalid) icons.invalid.style.display = 'block';
+            
+            // Jika state === 'hidden', semua tetap mati (bersih)
         }
 
         function checkAvailability(type, value) {
-            // Jangan cek jika input kosong/pendek
+            // Jika kosong atau pendek, sembunyikan semua ikon
             if (value.length < 3) {
                 updateIconState(type, 'hidden');
                 return;
@@ -194,7 +194,8 @@ if (isset($_POST['register'])) {
             })
             .then(res => res.json())
             .then(data => {
-                // Pastikan nilai input belum berubah saat response diterima
+                // Cek lagi: apakah user masih mengetik hal yang sama?
+                // Jika user sudah mengetik huruf baru, abaikan hasil fetch lama ini
                 const currentVal = document.getElementById(type).value;
                 if (currentVal !== value) return;
 
@@ -206,7 +207,7 @@ if (isset($_POST['register'])) {
             })
             .catch(err => {
                 console.error(err);
-                updateIconState(type, 'hidden'); // Sembunyikan jika error
+                updateIconState(type, 'hidden'); // Error jaringan? Sembunyikan saja
             });
         }
 
@@ -216,11 +217,12 @@ if (isset($_POST['register'])) {
         document.getElementById('email').addEventListener('keyup', function() {
             clearTimeout(emailTimer);
             
-            // Saat mengetik, sembunyikan semua ikon agar bersih
+            // PENTING: Saat user mengetik, sembunyikan semua ikon agar bersih
             updateIconState('email', 'hidden'); 
             
             const val = this.value;
             if(val.length >= 3) {
+                // Tunggu 800ms user diam, baru cek
                 emailTimer = setTimeout(() => { checkAvailability('email', val); }, 800);
             }
         });
@@ -228,6 +230,8 @@ if (isset($_POST['register'])) {
         // --- Event Listener Username ---
         document.getElementById('username').addEventListener('keyup', function() {
             clearTimeout(userTimer);
+            
+            // PENTING: Saat user mengetik, sembunyikan semua ikon agar bersih
             updateIconState('username', 'hidden');
             
             const val = this.value;
@@ -236,7 +240,7 @@ if (isset($_POST['register'])) {
             }
         });
 
-        // --- Password Checker (Visual Only) ---
+        // --- Password Checker ---
         const pwdInput = document.getElementById('password');
         const reqBox = document.getElementById('pwd-req-box');
         
@@ -246,7 +250,6 @@ if (isset($_POST['register'])) {
 
         function checkPwd(val) {
             const valid = val.length >= 6 && /[A-Z]/.test(val) && /[0-9]/.test(val) && /[^\w]/.test(val);
-            
             updateReq('req-len', val.length >= 6);
             updateReq('req-upper', /[A-Z]/.test(val));
             updateReq('req-num', /[0-9]/.test(val));
@@ -264,9 +267,13 @@ if (isset($_POST['register'])) {
                 icon.className = 'bx bx-check';
             } else {
                 el.className = 'req-item invalid';
-                icon.className = 'bx bx-check'; // Tetap check tapi abu-abu
+                icon.className = 'bx bx-check'; 
             }
         }
+        window.addEventListener("DOMContentLoaded", () => {
+            updateIconState('email', 'hidden');
+            updateIconState('username', 'hidden');
+        });
     </script>
     
     <?php include 'popupcustom.php'; ?>
