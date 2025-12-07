@@ -98,7 +98,6 @@ if (isset($_POST['register'])) {
 
         <div class="right-pane">
             <div class="auth-box">
-                <img src="https://cdn.ivanaldorino.web.id/valselt/valselt_black.png" alt="Logo" class="logo-auth">
 
                 <div class="auth-header">
                     <h2>Create Account</h2>

@@ -84,15 +84,14 @@ function processSSORedirect($conn, $uid, $target) {
 
                 <div class="hero-text">
                     <div class="quote-badge">A Wise Quote</div>
-                    <h1>Get Everything<br>You Want</h1>
-                    <p>You can get everything you want if you work hard, trust the process, and stick to the plan.</p>
+                    <h1>Build The Life<br>You Imagine.</h1>
+                    <p>The moment you commit to your vision, the world begins arranging itself to help you achieve it.</p>
                 </div>
             </div>
         </div>
 
         <div class="right-pane">
             <div class="auth-box">
-                <img src="https://cdn.ivanaldorino.web.id/valselt/valselt_black.png" alt="Logo" class="logo-auth">
 
                 <?php if ($is_logged_in && !empty($redirect_to)): ?>
                     <div class="auth-header">
