@@ -1,0 +1,11 @@
+services:
+  web:
+    build: .
+    container_name: valselt_id_app
+    ports:
+      - "9076:80" # Akses di localhost:9000
+    volumes:
+      - .:/var/www/html
+    restart: always
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
