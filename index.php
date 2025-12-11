@@ -182,11 +182,9 @@ $user_data = $u_res->fetch_assoc();
                     </div>
                 </div>
 
-                <form method="POST" onsubmit="return confirm('APAKAH ANDA YAKIN? \n\nAkun akan dihapus secara permanen dan tidak bisa dikembalikan!');">
-                    <button type="submit" name="delete_account" class="btn" style="width:auto; padding: 10px 24px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
-                        Hapus Akun
-                    </button>
-                </form>
+                <button type="button" onclick="openDeleteModal()" class="btn" style="width:auto; padding: 10px 24px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
+                    Hapus Akun
+                </button>
             </div>
         </div>
 
@@ -210,6 +208,25 @@ $user_data = $u_res->fetch_assoc();
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button type="button" onclick="closeCropModal()" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
             <button type="button" onclick="cropImage()" class="popup-btn success">Simpan</button>
+        </div>
+    </div>
+</div>
+
+<div class="popup-overlay" id="deleteModal" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box error">
+            <i class='bx bx-trash'></i>
+        </div>
+        
+        <h3 class="popup-title">Hapus Akun?</h3>
+        <p class="popup-message">Apakah Anda yakin? Akun yang dihapus tidak dapat dikembalikan lagi selamanya.</p>
+        
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button type="button" onclick="closeDeleteModal()" class="popup-btn">Batal</button>
+            
+            <form method="POST" style="width:100%;">
+                <button type="submit" name="delete_account" class="popup-btn error">Ya, Hapus</button>
+            </form>
         </div>
     </div>
 </div>
@@ -276,6 +293,21 @@ $user_data = $u_res->fetch_assoc();
         setTimeout(() => {
             cropModal.style.display = 'none';
             if(cropper) cropper.destroy();
+        }, 300);
+    }
+
+    // --- (PERUBAHAN 3: JS DELETE MODAL) ---
+    const deleteModal = document.getElementById('deleteModal');
+
+    function openDeleteModal() {
+        deleteModal.style.display = 'flex';
+        setTimeout(() => deleteModal.style.opacity = '1', 10);
+    }
+
+    function closeDeleteModal() {
+        deleteModal.style.opacity = '0';
+        setTimeout(() => {
+            deleteModal.style.display = 'none';
         }, 300);
     }
 </script>
