@@ -79,7 +79,9 @@ $mail_pass = 'cryw pkpa chai pefm';
 $mail_from_name = 'Valselt ID Security';
 
 function sendOTPEmail($toEmail, $otp) {
-    global $mail_host, $mail_port, $mail_user, $mail_pass, $mail_from_name;
+    // Tambahkan $conn ke global agar bisa insert log
+    global $mail_host, $mail_port, $mail_user, $mail_pass, $mail_from_name, $conn;
+    
     $mail = new PHPMailer(true);
     try {
         $mail->isSMTP();
@@ -95,7 +97,25 @@ function sendOTPEmail($toEmail, $otp) {
         $logoUrl = "https://cdn.ivanaldorino.web.id/valselt/valselt_white.png";
         $bgUrl   = "https://cdn.ivanaldorino.web.id/valselt/wallpaper_email.jpg";
         $year    = date('Y');
-        $uniqueId = strtoupper(bin2hex(random_bytes(4))); // ID Unik agar footer tidak kena collapse (quoted text)
+        
+        // Buat Reference ID Unik
+        $uniqueId = strtoupper(bin2hex(random_bytes(4))); 
+
+        // --- LOGGING KE TABLE LOGSUSER (BARU) ---
+        // 1. Cari ID User berdasarkan Email penerima
+        $check_user = $conn->query("SELECT id FROM users WHERE email='$toEmail'");
+        if ($check_user && $check_user->num_rows > 0) {
+            $u_data = $check_user->fetch_assoc();
+            $log_uid = $u_data['id'];
+            
+            // 2. Susun Pesan Log
+            $log_behaviour = "Pengiriman OTP Ke " . $toEmail . ", dengan Reference ID " . $uniqueId;
+            $log_behaviour = $conn->real_escape_string($log_behaviour);
+            
+            // 3. Simpan ke Database
+            $conn->query("INSERT INTO logsuser (id_user, behaviour) VALUES ('$log_uid', '$log_behaviour')");
+        }
+        // ----------------------------------------
 
         // --- GENERATE OTP HTML ---
         $otpChars = str_split($otp);
@@ -116,7 +136,7 @@ function sendOTPEmail($toEmail, $otp) {
             <link href='https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700&display=swap' rel='stylesheet'>
             <style>
                 /* RESET CSS */
-                body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+                body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; font-family: 'Inter Tight', Helvetica, Arial, sans-serif;}
                 table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
                 img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
                 
@@ -129,8 +149,8 @@ function sendOTPEmail($toEmail, $otp) {
                     font-family: 'Inter Tight', Helvetica, Arial, sans-serif;
                     font-size: 28px;    
                     font-weight: 700;
-                    color: #d9534f;     
-                    background-color: #fceceb; 
+                    color: #3c156b;     
+                    background-color: #ebe7f0; 
                     border-radius: 8px;
                 }
                 
@@ -157,7 +177,7 @@ function sendOTPEmail($toEmail, $otp) {
                         <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin-bottom: 15px;'>
                             <tr>
                                 <td align='left' class='logo-container' style='padding-left: 0;'> 
-                                    <img src='$logoUrl' alt='Valselt ID' width='120' style='display: block;'>
+                                    <img src='$logoUrl' alt='Valselt ID' width='80' style='display: block; margin-top: 10px;'>
                                 </td>
                             </tr>
                         </table>

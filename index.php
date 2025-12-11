@@ -25,17 +25,67 @@ if (isset($_POST['ajax_action'])) {
     }
 
     elseif ($_POST['ajax_action'] == 'send_otp_pass') {
+        $current_time = time();
+        
+        // Inisialisasi Session Rate Limit jika belum ada
+        if (!isset($_SESSION['otp_attempts'])) {
+            $_SESSION['otp_attempts'] = 0;
+            $_SESSION['otp_next_allowed'] = 0;
+        }
+
+        // Cek apakah masih dalam masa tunggu (Cooldown)
+        if ($current_time < $_SESSION['otp_next_allowed']) {
+            $wait_seconds = $_SESSION['otp_next_allowed'] - $current_time;
+            $response = [
+                'status' => 'error', 
+                'message' => 'Tunggu ' . ceil($wait_seconds/60) . ' menit lagi sebelum kirim ulang.',
+                'wait' => $wait_seconds // Kirim sisa waktu ke JS
+            ];
+            echo json_encode($response);
+            exit();
+        }
+
+        // Cek Batas Maksimal 5 Kali
+        if ($_SESSION['otp_attempts'] >= 5) {
+            // Hukuman 1 Jam (3600 detik)
+            $_SESSION['otp_next_allowed'] = $current_time + 3600;
+            // Reset attempt agar setelah 1 jam mulai dari 0 lagi (opsional, atau biarkan tetap 5)
+            $_SESSION['otp_attempts'] = 0; 
+
+            $response = [
+                'status' => 'error', 
+                'message' => 'Terlalu banyak percobaan. Silakan coba lagi dalam 1 jam.',
+                'wait' => 3600
+            ];
+            echo json_encode($response);
+            exit();
+        }
+
+        // --- PROSES KIRIM EMAIL ---
         $q = $conn->query("SELECT email FROM users WHERE id='$uid'");
         $row = $q->fetch_assoc();
         $email = $row['email'];
         $otp = rand(100000, 999999);
-        $expiry = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+        $expiry = date('Y-m-d H:i:s', strtotime('+10 minutes'));
         
-        // Simpan OTP khusus ganti password di kolom 'otp' (reuse kolom otp login/register)
         $conn->query("UPDATE users SET otp='$otp', otp_expiry='$expiry' WHERE id='$uid'");
         
         if (sendOTPEmail($email, $otp)) {
-            $response = ['status' => 'success', 'message' => 'OTP terkirim ke email ' . $email];
+            // BERHASIL KIRIM -> HITUNG WAKTU TUNGGU BERIKUTNYA
+            $attempts = $_SESSION['otp_attempts'];
+            
+            // Logika Backoff: 1 menit, 2 menit, 4 menit, dst.
+            // Rumus: 60 detik * (2 pangkat percobaan)
+            $next_wait = 60 * pow(2, $attempts); 
+            
+            $_SESSION['otp_next_allowed'] = $current_time + $next_wait;
+            $_SESSION['otp_attempts']++;
+
+            $response = [
+                'status' => 'success', 
+                'message' => 'OTP terkirim.',
+                'next_wait' => $next_wait // Beritahu JS berapa lama timer harus berjalan
+            ];
         } else {
             $response = ['status' => 'error', 'message' => 'Gagal mengirim email.'];
         }
@@ -337,6 +387,12 @@ $user_data = $u_res->fetch_assoc();
         <p id="error_msg_otp" style="color:red; font-size:0.85rem; display:none; margin-bottom:10px;"></p>
 
         <button onclick="checkOTP()" class="popup-btn warning" id="btnCheckOTP">Verifikasi OTP</button>
+        
+        <div style="margin-top:15px; font-size:0.9rem; color:var(--text-muted);">
+            Tidak menerima kode? 
+            <span id="timer_display" style="color:var(--text-muted);">Kirim ulang dalam 60s</span>
+            <a href="#" id="btn_resend" onclick="resendOTP()" style="display:none; color:var(--primary); font-weight:600;">Kirim Ulang</a>
+        </div>
         <button onclick="closeModal('modalVerifyOTP')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
     </div>
 </div>
@@ -480,9 +536,11 @@ $user_data = $u_res->fetch_assoc();
         });
     }
 
+    let resendInterval;
+
     // 3. Pindah ke Mode OTP (Kirim OTP dulu)
     function switchToOTP() {
-        const btn = document.getElementById('btnCheckPass'); // Pinjam tombol loading
+        const btn = document.getElementById('btnCheckPass'); 
         btn.innerText = "Mengirim OTP..."; btn.disabled = true;
 
         const formData = new FormData();
@@ -492,14 +550,94 @@ $user_data = $u_res->fetch_assoc();
         .then(r => r.json())
         .then(data => {
             btn.innerText = "Lanjutkan"; btn.disabled = false;
+            
             if(data.status === 'success') {
                 closeModal('modalVerifyPass');
-                openModal('modalVerifyOTP'); // Buka Modal Input OTP
-                alert(data.message); // Opsional: Beritahu user OTP dikirim
+                openModal('modalVerifyOTP');
+                
+                // HAPUS ALERT, Ganti dengan Timer
+                // Ambil waktu tunggu dari PHP (default 60s jika undefined)
+                let waitTime = data.next_wait ? data.next_wait : 60;
+                startCountdown(waitTime); 
             } else {
-                alert(data.message);
+                // Jika error karena cooldown (misal user refresh page)
+                if(data.wait) {
+                    closeModal('modalVerifyPass');
+                    openModal('modalVerifyOTP');
+                    startCountdown(data.wait);
+                    document.getElementById('error_msg_otp').innerText = data.message;
+                    document.getElementById('error_msg_otp').style.display = 'block';
+                } else {
+                    alert(data.message);
+                }
             }
         });
+    }
+
+    // FUNGSI BARU: KIRIM ULANG OTP
+    function resendOTP() {
+        const link = document.getElementById('btn_resend');
+        const timerText = document.getElementById('timer_display');
+        
+        link.style.display = 'none';
+        timerText.style.display = 'inline';
+        timerText.innerText = "Mengirim...";
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'send_otp_pass');
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                // Reset Timer dengan waktu baru (backoff multiplier)
+                startCountdown(data.next_wait);
+            } else {
+                // Jika kena limit 1 jam atau error lain
+                alert(data.message);
+                if(data.wait) {
+                   startCountdown(data.wait);
+                } else {
+                   link.style.display = 'inline'; // Munculkan lagi jika gagal bukan karena limit
+                   timerText.style.display = 'none';
+                }
+            }
+        });
+    }
+
+    // FUNGSI BARU: HITUNG MUNDUR
+    function startCountdown(seconds) {
+        const link = document.getElementById('btn_resend');
+        const timerText = document.getElementById('timer_display');
+        
+        link.style.display = 'none';
+        timerText.style.display = 'inline';
+        
+        let timeLeft = seconds;
+        
+        // Hapus interval sebelumnya jika ada agar tidak bentrok
+        if(resendInterval) clearInterval(resendInterval);
+
+        timerText.innerText = `Kirim ulang dalam ${timeLeft}s`;
+
+        resendInterval = setInterval(() => {
+            timeLeft--;
+            
+            if(timeLeft > 0) {
+                 // Format waktu jika > 60 detik (misal 1 jam cooldown)
+                 if(timeLeft > 60) {
+                     let minutes = Math.floor(timeLeft / 60);
+                     let secs = timeLeft % 60;
+                     timerText.innerText = `Tunggu ${minutes}m ${secs}s`;
+                 } else {
+                     timerText.innerText = `Kirim ulang dalam ${timeLeft}s`;
+                 }
+            } else {
+                clearInterval(resendInterval);
+                timerText.style.display = 'none';
+                link.style.display = 'inline'; // Munculkan tombol kirim ulang
+            }
+        }, 1000);
     }
 
     // 4. Cek Kode OTP via AJAX
