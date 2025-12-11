@@ -21,6 +21,30 @@ $db_name = 'valselt_id'; // Pastikan DB ini sudah dibuat dan tabel users ada dis
 $conn = new mysqli($db_host, $db_user, $db_pass, $db_name, $db_port);
 if ($conn->connect_error) die("Koneksi Valselt ID Gagal: " . $conn->connect_error);
 
+// --- AUTO LOGIN CHECK (REMEMBER ME) ---
+if (!isset($_SESSION['valselt_user_id']) && isset($_COOKIE['remember_token'])) {
+    $cookie_data = explode(':', $_COOKIE['remember_token']);
+    
+    if (count($cookie_data) == 2) {
+        $uid = $conn->real_escape_string($cookie_data[0]);
+        $token = $conn->real_escape_string($cookie_data[1]);
+        
+        // Cari user yang ID dan Token-nya cocok
+        $q = $conn->query("SELECT * FROM users WHERE id='$uid' AND remember_token='$token'");
+        
+        if ($q->num_rows > 0) {
+            $user = $q->fetch_assoc();
+            
+            // Login-kan user secara otomatis
+            $_SESSION['valselt_user_id'] = $user['id'];
+            $_SESSION['valselt_username'] = $user['username'];
+            
+            // (Opsional) Perbarui masa aktif cookie agar diperpanjang 30 hari lagi
+            setcookie('remember_token', $_COOKIE['remember_token'], time() + (86400 * 30), "/", "", false, true);
+        }
+    }
+}
+
 // --- MINIO ---
 $minio_endpoint = 'https://cdn.ivanaldorino.web.id/';
 $minio_key      = 'admin';

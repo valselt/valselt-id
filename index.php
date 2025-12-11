@@ -190,7 +190,7 @@ $user_data = $u_res->fetch_assoc();
 
         <div style="display:flex; gap:10px; margin-top:20px;">
             <button type="button" onclick="closeCropModal()" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
-            <button type="button" onclick="cropImage()" class="popup-btn success">Selesai</button>
+            <button type="button" onclick="cropImage()" class="popup-btn success">Simpan</button>
         </div>
     </div>
 </div>
@@ -236,6 +236,20 @@ $user_data = $u_res->fetch_assoc();
 
         document.getElementById('cropped_image_data').value = base64Image;
         closeCropModal();
+
+        // 1. Ambil elemen form
+        const form = document.getElementById('profileForm');
+        
+        // 2. Buat input rahasia (hidden) agar PHP tahu ini adalah aksi 'update_profile'
+        // (Karena kalau submit via JS, tombol submit asli tidak dianggap ditekan)
+        const hiddenSubmit = document.createElement('input');
+        hiddenSubmit.type = 'hidden';
+        hiddenSubmit.name = 'update_profile'; // Nama ini wajib sama dengan cek di PHP: isset($_POST['update_profile'])
+        hiddenSubmit.value = '1';
+        form.appendChild(hiddenSubmit);
+
+        // 3. Kirim form secara otomatis ke server
+        form.submit();
     }
 
     function closeCropModal() {

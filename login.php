@@ -44,6 +44,21 @@ if (isset($_POST['login'])) {
             } else {
                 $_SESSION['valselt_user_id'] = $row['id'];
                 $_SESSION['valselt_username'] = $row['username'];
+                // --- TAMBAHAN LOGIKA REMEMBER ME ---
+                if (isset($_POST['remember_me'])) {
+                    // 1. Buat Token Random
+                    $token = bin2hex(random_bytes(32));
+                    
+                    // 2. Simpan Token di Database
+                    $uid = $row['id'];
+                    $conn->query("UPDATE users SET remember_token='$token' WHERE id='$uid'");
+                    
+                    // 3. Simpan Token di Cookie Browser (30 Hari)
+                    // Format cookie: "user_id:token" (agar pencarian di DB cepat)
+                    $cookie_value = $uid . ':' . $token;
+                    setcookie('remember_token', $cookie_value, time() + (86400 * 30), "/", "", false, true);
+                }
+                // -----------------------------------
                 processSSORedirect($conn, $row['id'], $redirect_to);
             }
         } else {
@@ -158,7 +173,7 @@ function processSSORedirect($conn, $uid, $target) {
                         </div>
                         
                         <div style="display:flex; justify-content:space-between; margin-bottom:20px; font-size:0.9rem; color:var(--text-muted);">
-                            <label><input type="checkbox"> Remember me</label>
+                            <label><input type="checkbox" name="remember_me" value="1"> Ingat Saya</label>
                             <a href="#" style="color:var(--text-main); font-weight:600;">Forgot Password?</a>
                         </div>
 
