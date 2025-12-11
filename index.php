@@ -7,6 +7,77 @@ if (!isset($_SESSION['valselt_user_id'])) {
 
 $user_id = $_SESSION['valselt_user_id'];
 
+// --- AJAX HANDLER UNTUK GANTI PASSWORD ---
+if (isset($_POST['ajax_action'])) {
+    header('Content-Type: application/json');
+    $uid = $_SESSION['valselt_user_id'];
+    $response = ['status' => 'error', 'message' => 'Terjadi kesalahan'];
+
+    if ($_POST['ajax_action'] == 'verify_old_password') {
+        $old_pass = $_POST['old_password'];
+        $q = $conn->query("SELECT password FROM users WHERE id='$uid'");
+        $row = $q->fetch_assoc();
+        if (password_verify($old_pass, $row['password'])) {
+            $response = ['status' => 'success'];
+        } else {
+            $response = ['status' => 'error', 'message' => 'Password lama salah!'];
+        }
+    }
+
+    elseif ($_POST['ajax_action'] == 'send_otp_pass') {
+        $q = $conn->query("SELECT email FROM users WHERE id='$uid'");
+        $row = $q->fetch_assoc();
+        $email = $row['email'];
+        $otp = rand(100000, 999999);
+        $expiry = date('Y-m-d H:i:s', strtotime('+5 minutes'));
+        
+        // Simpan OTP khusus ganti password di kolom 'otp' (reuse kolom otp login/register)
+        $conn->query("UPDATE users SET otp='$otp', otp_expiry='$expiry' WHERE id='$uid'");
+        
+        if (sendOTPEmail($email, $otp)) {
+            $response = ['status' => 'success', 'message' => 'OTP terkirim ke email ' . $email];
+        } else {
+            $response = ['status' => 'error', 'message' => 'Gagal mengirim email.'];
+        }
+    }
+
+    elseif ($_POST['ajax_action'] == 'verify_otp_pass') {
+        $input_otp = $_POST['otp_code'];
+        $now = date('Y-m-d H:i:s');
+        $q = $conn->query("SELECT otp, otp_expiry FROM users WHERE id='$uid'");
+        $user = $q->fetch_assoc();
+
+        if ($user['otp'] == $input_otp && $user['otp_expiry'] > $now) {
+            $conn->query("UPDATE users SET otp=NULL WHERE id='$uid'"); // Hanguskan OTP
+            $response = ['status' => 'success'];
+        } else {
+            $response = ['status' => 'error', 'message' => 'Kode OTP salah atau kadaluarsa!'];
+        }
+    }
+
+    echo json_encode($response);
+    exit(); // Stop eksekusi agar tidak memuat HTML
+}
+
+// --- LOGIC SIMPAN PASSWORD BARU (POST BIASA) ---
+if (isset($_POST['save_new_password'])) {
+    $new_pass = $_POST['new_password'];
+    if (strlen($new_pass) < 6) {
+        $_SESSION['popup_status'] = 'error';
+        $_SESSION['popup_message'] = 'Password minimal 6 karakter!';
+    } else {
+        $hash = password_hash($new_pass, PASSWORD_DEFAULT);
+        $conn->query("UPDATE users SET password='$hash' WHERE id='$user_id'");
+        $_SESSION['popup_status'] = 'success';
+        $_SESSION['popup_message'] = 'Password berhasil diganti!';
+    }
+    header("Location: index.php"); exit();
+}
+
+
+
+
+
 // --- UPDATE PROFILE LOGIC ---
 if (isset($_POST['update_profile'])) {
     $new_username = htmlspecialchars($_POST['username']);
@@ -48,11 +119,6 @@ if (isset($_POST['update_profile'])) {
     }
 
     $conn->query("UPDATE users SET username='$new_username', email='$new_email' WHERE id='$user_id'");
-
-    if (!empty($new_pass)) {
-        $hash = password_hash($new_pass, PASSWORD_DEFAULT);
-        $conn->query("UPDATE users SET password='$hash' WHERE id='$user_id'");
-    }
     
     $_SESSION['valselt_username'] = $new_username;
     $_SESSION['popup_status'] = 'success';
@@ -126,17 +192,12 @@ $user_data = $u_res->fetch_assoc();
                     <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($user_data['email']); ?>" required>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Password Baru <span style="font-weight:400; color:var(--text-muted); font-size:0.8rem;">(Opsional)</span></label>
-                    <input type="password" name="password" class="form-control" placeholder="******">
-                </div>
-
                 <button type="submit" name="update_profile" class="btn btn-primary">Simpan Perubahan</button>
             </div>
         </form>
 
         <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e5e7eb; margin-top:40px;">
-            <h4 style="margin-bottom: 15px; font-weight:600;">Linked Accounts</h4>
+            <h4 style="margin-bottom: 20px; font-weight:600;">Linked Accounts</h4>
             
             <div style="display:flex; justify-content:space-between; align-items:center;">
                 <div style="display:flex; align-items:center;">
@@ -174,18 +235,35 @@ $user_data = $u_res->fetch_assoc();
                 <h4 style="font-weight:600;">Danger Zone</h4>
             </div>
             
-            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
-                <div>
-                    <div style="font-weight:600; color: #9b2c2c;">Hapus Akun Permanen</div>
-                    <div style="font-size:0.85rem; color: #c53030; opacity: 0.8; max-width: 300px; line-height: 1.5;">
-                        Tindakan ini tidak dapat dibatalkan. Semua data profil dan foto akan hilang selamanya.
+            <div style="display:flex; flex-direction:column; gap:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <div style="font-weight:600; color: #9b2c2c;">Hapus Akun Permanen</div>
+                        <div style="font-size:0.85rem; color: #c53030; opacity: 0.8; max-width: 300px; line-height: 1.5;">
+                            Tindakan ini tidak dapat dibatalkan. Semua data profil dan foto akan hilang selamanya.
+                        </div>
                     </div>
+
+                    <button type="button" onclick="openDeleteModal()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
+                        <i class='bx bx-trash' style="font-size: 1.2rem;"></i>
+                    </button>
                 </div>
 
-                <button type="button" onclick="openDeleteModal()" class="btn" style="width:auto; padding: 10px 24px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
-                    Hapus Akun
-                </button>
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <div style="font-weight:600; color: #9b2c2c;">Ganti Password</div>
+                        <div style="font-size:0.85rem; color: #c53030; opacity: 0.8; max-width: 300px; line-height: 1.5;">
+                            Ganti Password Akun Anda dengan yang baru.
+                        </div>
+                    </div>
+
+                    <button type="button" onclick="openVerifyPassModal()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
+                        <i class='bx bx-key' style="font-size: 1.2rem;"></i>
+                    </button>
+                </div>
             </div>
+
+            
         </div>
 
         <div style="text-align:center; margin-top: 40px;">
@@ -228,6 +306,52 @@ $user_data = $u_res->fetch_assoc();
                 <button type="submit" name="delete_account" class="popup-btn error">Ya, Hapus</button>
             </form>
         </div>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalVerifyPass" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box warning"><i class='bx bx-lock-alt'></i></div>
+        <h3 class="popup-title">Verifikasi</h3>
+        <p class="popup-message">Masukkan password lama Anda untuk melanjutkan.</p>
+        
+        <input type="password" id="old_password_input" class="form-control" placeholder="Password Lama" style="margin-bottom:15px; text-align:center;">
+        <p id="error_msg_pass" style="color:red; font-size:0.85rem; display:none; margin-bottom:10px;"></p>
+
+        <button onclick="checkOldPassword()" class="popup-btn warning" id="btnCheckPass">Lanjutkan</button>
+        
+        <div style="margin-top:15px; font-size:0.9rem; color:var(--text-muted);">
+            Lupa password? <a href="#" onclick="switchToOTP()" style="color:var(--primary); font-weight:600;">Gunakan OTP Email</a>
+        </div>
+        <button onclick="closeModal('modalVerifyPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalVerifyOTP" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box warning"><i class='bx bx-envelope'></i></div>
+        <h3 class="popup-title">Kode OTP</h3>
+        <p class="popup-message">Kami telah mengirim kode ke email Anda.</p>
+        
+        <input type="text" id="otp_input" class="form-control" placeholder="000000" style="margin-bottom:15px; text-align:center; letter-spacing:5px; font-size:1.2rem;">
+        <p id="error_msg_otp" style="color:red; font-size:0.85rem; display:none; margin-bottom:10px;"></p>
+
+        <button onclick="checkOTP()" class="popup-btn warning" id="btnCheckOTP">Verifikasi OTP</button>
+        <button onclick="closeModal('modalVerifyOTP')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalNewPass" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box success"><i class='bx bx-key'></i></div>
+        <h3 class="popup-title">Password Baru</h3>
+        <p class="popup-message">Silakan buat password baru Anda.</p>
+        
+        <form method="POST">
+            <input type="password" name="new_password" class="form-control" placeholder="Password Baru (Min. 6 Karakter)" required style="margin-bottom:15px; text-align:center;">
+            <button type="submit" name="save_new_password" class="popup-btn success">Simpan Password</button>
+        </form>
+        <button onclick="closeModal('modalNewPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
     </div>
 </div>
 
@@ -309,6 +433,101 @@ $user_data = $u_res->fetch_assoc();
         setTimeout(() => {
             deleteModal.style.display = 'none';
         }, 300);
+    }
+
+    // --- FUNGSI UMUM BUKA/TUTUP MODAL ---
+    function openModal(id) {
+        const el = document.getElementById(id);
+        el.style.display = 'flex';
+        setTimeout(() => el.style.opacity = '1', 10);
+    }
+    function closeModal(id) {
+        const el = document.getElementById(id);
+        el.style.opacity = '0';
+        setTimeout(() => el.style.display = 'none', 300);
+    }
+
+    // 1. Tombol Ganti Password Ditekan
+    function openVerifyPassModal() {
+        openModal('modalVerifyPass');
+    }
+
+    // 2. Cek Password Lama via AJAX
+    function checkOldPassword() {
+        const pass = document.getElementById('old_password_input').value;
+        const btn = document.getElementById('btnCheckPass');
+        const errMsg = document.getElementById('error_msg_pass');
+
+        if(!pass) return;
+
+        btn.innerText = "Memeriksa..."; btn.disabled = true;
+        
+        const formData = new FormData();
+        formData.append('ajax_action', 'verify_old_password');
+        formData.append('old_password', pass);
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            btn.innerText = "Lanjutkan"; btn.disabled = false;
+            if(data.status === 'success') {
+                closeModal('modalVerifyPass');
+                openModal('modalNewPass'); // Buka Modal Password Baru
+            } else {
+                errMsg.innerText = data.message;
+                errMsg.style.display = 'block';
+            }
+        });
+    }
+
+    // 3. Pindah ke Mode OTP (Kirim OTP dulu)
+    function switchToOTP() {
+        const btn = document.getElementById('btnCheckPass'); // Pinjam tombol loading
+        btn.innerText = "Mengirim OTP..."; btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'send_otp_pass');
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            btn.innerText = "Lanjutkan"; btn.disabled = false;
+            if(data.status === 'success') {
+                closeModal('modalVerifyPass');
+                openModal('modalVerifyOTP'); // Buka Modal Input OTP
+                alert(data.message); // Opsional: Beritahu user OTP dikirim
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+
+    // 4. Cek Kode OTP via AJAX
+    function checkOTP() {
+        const code = document.getElementById('otp_input').value;
+        const btn = document.getElementById('btnCheckOTP');
+        const errMsg = document.getElementById('error_msg_otp');
+
+        if(!code) return;
+
+        btn.innerText = "Memverifikasi..."; btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'verify_otp_pass');
+        formData.append('otp_code', code);
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            btn.innerText = "Verifikasi OTP"; btn.disabled = false;
+            if(data.status === 'success') {
+                closeModal('modalVerifyOTP');
+                openModal('modalNewPass'); // Buka Modal Password Baru
+            } else {
+                errMsg.innerText = data.message;
+                errMsg.style.display = 'block';
+            }
+        });
     }
 </script>
 
