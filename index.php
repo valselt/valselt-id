@@ -167,14 +167,33 @@ $user_data = $u_res->fetch_assoc();
 
         <hr style="border:0; border-top:1px solid #e5e7eb; margin:40px 0;">
 
-        <div style="text-align:center;">
-             <form method="POST" onsubmit="return confirm('Yakin ingin menghapus akun? Ini permanen!');" style="margin-bottom:15px;">
-                <button type="submit" name="delete_account" style="background:none; border:none; color:var(--danger); font-weight:600; cursor:pointer; font-family:var(--font-sans);">
-                    <i class='bx bx-trash'></i> Hapus Akun Saya Permanen
-                </button>
-            </form>
+        <div style="background: #fff5f5; padding: 25px; border-radius: 12px; border: 1px solid #fed7d7;">
             
-            <a href="logout.php" class="btn btn-logout" style="display:inline-block; text-decoration:none; padding:10px 20px; border-radius:8px;">Keluar / Logout</a>
+            <div style="display:flex; align-items:center; margin-bottom: 20px; color: #c53030;">
+                <i class='bx bx-error' style="font-size: 1.2rem; margin-right: 10px;"></i>
+                <h4 style="font-weight:600;">Danger Zone</h4>
+            </div>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <div style="font-weight:600; color: #9b2c2c;">Hapus Akun Permanen</div>
+                    <div style="font-size:0.85rem; color: #c53030; opacity: 0.8; max-width: 300px; line-height: 1.5;">
+                        Tindakan ini tidak dapat dibatalkan. Semua data profil dan foto akan hilang selamanya.
+                    </div>
+                </div>
+
+                <form method="POST" onsubmit="return confirm('APAKAH ANDA YAKIN? \n\nAkun akan dihapus secara permanen dan tidak bisa dikembalikan!');">
+                    <button type="submit" name="delete_account" class="btn" style="width:auto; padding: 10px 24px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
+                        Hapus Akun
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <div style="text-align:center; margin-top: 40px;">
+            <a href="logout.php" class="btn btn-logout" style="display:inline-flex; align-items:center; justify-content: center; gap:8px; text-decoration:none; padding:12px 30px; border-radius:50px; font-weight:600;">
+                <i class='bx bx-log-out'></i> Keluar / Logout
+            </a>
         </div>
     </div>
 </div>
