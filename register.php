@@ -83,11 +83,25 @@ if (isset($_POST['register'])) {
 
     <div class="split-screen">
         <div class="left-pane">
-            <div class="left-pane-bg"></div>
+            <div class="carousel-wrapper" id="bg-carousel">
+                <div class="carousel-slide active" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/1.png');"></div>
+                <div class="carousel-slide" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/2.png');"></div>
+                <div class="carousel-slide" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/3.png');"></div>
+                <div class="carousel-slide" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/4.png');"></div>
+                <div class="carousel-slide" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/5.png');"></div>
+                <div class="carousel-slide" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/6.png');"></div>
+                <div class="carousel-slide" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/7.png');"></div>
+                <div class="carousel-slide" style="background-image: url('https://cdn.ivanaldorino.web.id/valselt/carousel-left-pane/8.png');"></div>
+            </div>
+
             <div class="left-content">
                 <div>
                     <img src="https://cdn.ivanaldorino.web.id/valselt/valselt_white.png" alt="Valselt Logo" style="height: 40px;">
                 </div>
+                
+                <div class="carousel-indicators" id="carousel-indicators">
+                    </div>
+
                 <div class="hero-text">
                     <div class="quote-badge">Join Us Today</div>
                     <h1>Create Your<br>Legacy</h1>
@@ -269,9 +283,62 @@ if (isset($_POST['register'])) {
                 icon.className = 'bx bx-check'; 
             }
         }
+
+        function initCarousel() {
+            const slides = document.querySelectorAll('.carousel-slide');
+            const indicatorsContainer = document.getElementById('carousel-indicators');
+            let currentIndex = 0;
+            const intervalTime = 5000; // 5 Detik
+
+            // 1. Buat indikator sesuai jumlah slide
+            slides.forEach((slide, index) => {
+                const dot = document.createElement('div');
+                dot.classList.add('indicator-dot');
+                if (index === 0) dot.classList.add('active');
+                
+                // Klik indikator untuk pindah manual
+                dot.addEventListener('click', () => {
+                    goToSlide(index);
+                    resetTimer();
+                });
+                
+                indicatorsContainer.appendChild(dot);
+            });
+
+            const dots = document.querySelectorAll('.indicator-dot');
+
+            function showSlide(index) {
+                // Reset semua
+                slides.forEach(slide => slide.classList.remove('active'));
+                dots.forEach(dot => dot.classList.remove('active'));
+                
+                // Aktifkan target
+                slides[index].classList.add('active');
+                dots[index].classList.add('active');
+            }
+
+            function nextSlide() {
+                currentIndex = (currentIndex + 1) % slides.length;
+                showSlide(currentIndex);
+            }
+
+            function goToSlide(index) {
+                currentIndex = index;
+                showSlide(currentIndex);
+            }
+
+            let slideInterval = setInterval(nextSlide, intervalTime);
+
+            function resetTimer() {
+                clearInterval(slideInterval);
+                slideInterval = setInterval(nextSlide, intervalTime);
+            }
+        }
+
         window.addEventListener("DOMContentLoaded", () => {
             updateIconState('email', 'hidden');
             updateIconState('username', 'hidden');
+            initCarousel();
         });
     </script>
     
