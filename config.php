@@ -1,4 +1,5 @@
 <?php
+
 session_start();
 date_default_timezone_set('Asia/Jakarta');
 
@@ -8,6 +9,7 @@ require __DIR__ . '/vendor/autoload.php';
 use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
 use PHPMailer\PHPMailer\PHPMailer;
+use Google\Client as GoogleClient;
 
 // --- DATABASE PUSAT (VALSELT ID) ---
 $db_host = '100.115.160.110';
@@ -32,6 +34,15 @@ try {
         'credentials' => ['key' => $minio_key, 'secret' => $minio_secret],
     ]);
 } catch (Exception $e) { die("Gagal MinIO: " . $e->getMessage()); }
+
+
+$google_client = new GoogleClient();
+$google_client->setClientId('627951571756-lrp1sdd41nbbi6sf0snvkcs4e6v8c43g.apps.googleusercontent.com');
+$google_client->setClientSecret('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');
+// Ganti URL dibawah sesuai domain/IP CasaOS Anda
+$google_client->setRedirectUri('https://valseltidbackup.ivanaldorino.web.id/google_auth.php'); 
+$google_client->addScope('email');
+$google_client->addScope('profile');
 
 // --- CREDENTIALS LAIN ---
 $recaptcha_site_key   = '6LdEEyMsAAAAAPK75it3V-_wxwWESVqQebrdNzKF'; 

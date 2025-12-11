@@ -1,6 +1,10 @@
 <?php
 require 'config.php'; 
 
+if(isset($_GET['redirect_to'])){
+    $_SESSION['sso_redirect_to'] = $_GET['redirect_to'];
+}
+
 // 1. TANGKAP TUJUAN SSO
 $redirect_to = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '';
 
@@ -160,6 +164,16 @@ function processSSORedirect($conn, $uid, $target) {
 
                         <button type="submit" name="login" class="btn btn-primary">Sign In</button>
                     </form>
+
+                    <div style="text-align:center; margin: 20px 0;">
+                        <span style="background:white; padding:0 10px; color:var(--text-muted); position:relative; z-index:1;">OR</span>
+                        <hr style="margin-top:-10px; border:0; border-top:1px solid #e5e7eb;">
+                    </div>
+
+                    <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn-google">
+                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style="width:20px; margin-right:10px;">
+                        Sign in with Google
+                    </a>
 
                     <div class="auth-links">
                         Don't have an account? <a href="register.php">Sign Up</a>

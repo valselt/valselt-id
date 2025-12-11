@@ -135,6 +135,36 @@ $user_data = $u_res->fetch_assoc();
             </div>
         </form>
 
+        <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e5e7eb; margin-top:40px;">
+            <h4 style="margin-bottom: 15px; font-weight:600;">Linked Accounts</h4>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <div style="display:flex; align-items:center;">
+                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width:24px; margin-right:12px;">
+                    <div>
+                        <div style="font-weight:500;">Google</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted);">
+                            <?php if($user_data['google_id']): ?>
+                                Terhubung
+                            <?php else: ?>
+                                Tidak terhubung
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <?php if($user_data['google_id']): ?>
+                    <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;">
+                        <i class='bx bx-check'></i> Linked
+                    </button>
+                <?php else: ?>
+                    <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">
+                        Link Account
+                    </a>
+                <?php endif; ?>
+            </div>
+        </div>
+
         <hr style="border:0; border-top:1px solid #e5e7eb; margin:40px 0;">
 
         <div style="text-align:center;">

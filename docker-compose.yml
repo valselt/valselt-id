@@ -1,11 +1,20 @@
 services:
   web:
-    build: .
+    build:
+      context: .
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
+        - linux/arm64
     container_name: valselt_id_app
     ports:
-      - "9076:80" # Akses di localhost:9000
+      - "9076:80"
     volumes:
       - .:/var/www/html
+      - vendor_data:/var/www/html/vendor
     restart: always
     extra_hosts:
       - "host.docker.internal:host-gateway"
+
+volumes:
+  vendor_data:

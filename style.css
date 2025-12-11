@@ -624,3 +624,24 @@ a:hover { color: var(--primary); }
         transform: translateX(0);
     }
 }
+
+.btn-google {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: var(--radius-sm);
+    background: white;
+    color: var(--text-main);
+    font-weight: 500;
+    font-family: var(--font-sans);
+    transition: 0.2s;
+    margin-bottom: 20px;
+}
+.btn-google:hover {
+    background: #f9fafb;
+    border-color: #d1d5db;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
