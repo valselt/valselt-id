@@ -89,8 +89,133 @@ function sendOTPEmail($toEmail, $otp) {
         $mail->setFrom($mail_user, $mail_from_name);
         $mail->addAddress($toEmail);
         $mail->isHTML(true);
-        $mail->Subject = "Kode Verifikasi Valselt ID";
-        $mail->Body    = "<h3>Kode OTP: $otp</h3>";
+        $mail->Subject = "Kode Verifikasi Valselt ID Anda";
+
+        // --- ASSETS ---
+        $logoUrl = "https://cdn.ivanaldorino.web.id/valselt/valselt_white.png";
+        $bgUrl   = "https://cdn.ivanaldorino.web.id/valselt/wallpaper_email.jpg";
+        $year    = date('Y');
+        $uniqueId = strtoupper(bin2hex(random_bytes(4))); // ID Unik agar footer tidak kena collapse (quoted text)
+
+        // --- GENERATE OTP HTML ---
+        $otpChars = str_split($otp);
+        $otpHtml = '';
+        foreach ($otpChars as $char) {
+            $otpHtml .= "<span class='otp-box'>$char</span>";
+        }
+
+        // --- EMAIL CONTENT ---
+        $mailContent = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='utf-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <link rel='preconnect' href='https://fonts.googleapis.com'>
+            <link rel='preconnect' href='https://fonts.gstatic.com' crossorigin>
+            <link href='https://fonts.googleapis.com/css2?family=Inter+Tight:wght@700&display=swap' rel='stylesheet'>
+            <style>
+                /* RESET CSS */
+                body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; }
+                table { border-collapse: collapse; mso-table-lspace: 0pt; mso-table-rspace: 0pt; }
+                img { border: 0; outline: none; text-decoration: none; -ms-interpolation-mode: bicubic; }
+                
+                /* DEFAULT STYLES (Desktop) */
+                .otp-box {
+                    display: inline-block;
+                    margin: 0 6px;
+                    padding: 12px 18px; 
+                    /* MENGGUNAKAN FONT INTER TIGHT */
+                    font-family: 'Inter Tight', Helvetica, Arial, sans-serif;
+                    font-size: 28px;    
+                    font-weight: 700;
+                    color: #d9534f;     
+                    background-color: #fceceb; 
+                    border-radius: 8px;
+                }
+                
+                .main-table { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+                
+                /* MOBILE RESPONSIVE */
+                @media screen and (max-width: 480px) {
+                    .main-table { width: 90% !important; } 
+                    .otp-box {
+                        margin: 0 2px !important;   
+                        padding: 8px 12px !important; 
+                        font-size: 20px !important;   
+                    }
+                    .logo-container { padding-left: 5% !important; }
+                }
+            </style>
+        </head>
+        <body style='margin: 0; padding: 0; background-color: #f4f4f4;'>
+            
+            <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-image: url(\"$bgUrl\"); background-size: cover; background-position: center; background-repeat: no-repeat; padding: 40px 0;'>
+                <tr>
+                    <td align='center'>
+                        
+                        <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin-bottom: 15px;'>
+                            <tr>
+                                <td align='left' class='logo-container' style='padding-left: 0;'> 
+                                    <img src='$logoUrl' alt='Valselt ID' width='120' style='display: block;'>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class='main-table' border='0' cellpadding='0' cellspacing='0'>
+                            <tr>
+                                <td align='center' style='padding: 50px 40px; text-align: center;'>
+                                    
+                                    <h2 style='margin: 0 0 10px 0; font-family: Helvetica, Arial, sans-serif; color: #333333; font-size: 24px;'>
+                                        Kode OTP Anda
+                                    </h2>
+                                    
+                                    <p style='margin: 0 0 20px 0; font-family: Helvetica, Arial, sans-serif; color: #666666; font-size: 14px;'>
+                                        Halo Pengguna Valselt ID,
+                                    </p>
+                                    
+                                    <p style='margin: 0 0 30px 0; font-family: Helvetica, Arial, sans-serif; color: #666666; font-size: 14px; line-height: 1.5;'>
+                                        Gunakan kode berikut untuk memverifikasi akun Anda.<br>
+                                        Kode ini berlaku selama <strong>10 menit</strong>.
+                                    </p>
+                                    
+                                    <div style='margin: 30px 0;'>
+                                        $otpHtml
+                                    </div>
+                                    
+                                    <p style='margin: 30px 0 0 0; font-family: Helvetica, Arial, sans-serif; color: #999999; font-size: 12px;'>
+                                        Jangan bagikan kode ini kepada siapa pun,<br>termasuk pihak Valselt ID.
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align='center' style='background-color: #fafafa; padding: 15px; border-top: 1px solid #eeeeee;'>
+                                    <a href='#' style='color: #1a73e8; font-family: Helvetica, Arial, sans-serif; font-size: 12px; text-decoration: none;'>Pusat Bantuan</a>
+                                    <span style='color: #cccccc; margin: 0 10px;'>|</span>
+                                    <a href='#' style='color: #1a73e8; font-family: Helvetica, Arial, sans-serif; font-size: 12px; text-decoration: none;'>Website Kami</a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin-top: 20px;'>
+                            <tr>
+                                <td align='center' style='font-family: Helvetica, Arial, sans-serif; color: #ffffff; font-size: 12px; opacity: 0.8;'>
+                                    &copy; $year Valselt ID Company. All rights reserved.<br>
+                                    <span style='color: #ffffff; font-size: 10px; opacity: 0.4;'>Ref: $uniqueId</span>
+                                </td>
+                            </tr>
+                        </table>
+
+                    </td>
+                </tr>
+            </table>
+            
+            <div style='display:none; white-space:nowrap; font:15px courier; line-height:0;'>&nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp; &nbsp;</div>
+        </body>
+        </html>
+        ";
+
+        $mail->Body = $mailContent;
         $mail->send();
         return true;
     } catch (Exception $e) { return false; }
