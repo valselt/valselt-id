@@ -1178,18 +1178,48 @@ if (isset($_POST['send_logs_email'])) {
         const header = document.getElementById(headerId);
         const contentId = headerId.replace('header', 'content');
         const content = document.getElementById(contentId);
-        const icon = header.querySelector('.indicator');
 
-        if (content.classList.contains('open')) {
-            // Tutup
-            content.classList.remove('open');
-            header.classList.remove('open');
+        const isOpen = content.classList.contains('open');
+
+        if (isOpen) {
+            // CLOSE
+            const fullHeight = content.scrollHeight;
+            content.style.height = fullHeight + "px"; 
+
+            requestAnimationFrame(() => {
+                content.style.height = "0px";
+                content.style.opacity = "0";
+                header.classList.remove("open");
+            });
+
+            content.addEventListener("transitionend", () => {
+                if (!content.classList.contains("open")) {
+                    content.style.height = "";
+                }
+            }, { once: true });
+
+            content.classList.remove("open");
+
         } else {
-            // Buka
-            content.classList.add('open');
-            header.classList.add('open');
+            // OPEN
+            content.classList.add("open");
+            header.classList.add("open");
+
+            const fullHeight = content.scrollHeight;
+            content.style.height = "0px";
+            content.style.opacity = "0";
+
+            requestAnimationFrame(() => {
+                content.style.height = fullHeight + "px";
+                content.style.opacity = "1";
+            });
+
+            content.addEventListener("transitionend", () => {
+                content.style.height = "auto";
+            }, { once: true });
         }
     }
+
 
 </script>
 
