@@ -822,7 +822,7 @@ if (isset($_POST['send_logs_email'])) {
     </div>
 </div>
 
-<script src="passkey.js"></script>
+<script src="webauthn.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
     let cropper;

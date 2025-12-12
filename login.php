@@ -220,7 +220,7 @@ function processSSORedirect($conn, $uid, $target) {
             </div>
         </div>
     </div>
-    <script src="passkey.js"></script>
+    <script src="webauthn.js"></script>
     <script>
         // --- SCRIPT CAROUSEL LOGIC ---
         document.addEventListener("DOMContentLoaded", function() {
