@@ -581,7 +581,7 @@ if (isset($_POST['send_logs_email'])) {
         </div>
 
         <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="button" onclick="closeCropModal()" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
+            <button type="button" onclick="closeModal('cropModal')" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
             <button type="button" onclick="cropImage()" class="popup-btn success">Simpan</button>
         </div>
     </div>
@@ -597,7 +597,7 @@ if (isset($_POST['send_logs_email'])) {
         <p class="popup-message">Apakah Anda yakin? Akun yang dihapus tidak dapat dikembalikan lagi selamanya.</p>
         
         <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="button" onclick="closeDeleteModal()" class="popup-btn">Batal</button>
+            <button type="button" onclick="closeModal('deleteModal')" class="popup-btn">Batal</button>
             
             <form method="POST" style="width:100%;">
                 <button type="submit" name="delete_account" class="popup-btn error">Ya, Hapus</button>
@@ -870,7 +870,7 @@ if (isset($_POST['send_logs_email'])) {
     const deleteModal = document.getElementById('deleteModal');
 
     function openDeleteModal() {
-        deleteModal.style.display = 'flex';
+        openModal('deleteModal');
         setTimeout(() => deleteModal.style.opacity = '1', 10);
     }
 
