@@ -377,7 +377,7 @@ $user_data = $u_res->fetch_assoc();
                     <i class='bx bx-shield' style="margin-right:10px; font-size:1.2rem;"></i><h4>Passkey</h4>
                 </div>
 
-                <button onclick="registerPasskey()" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#000; color:white;">
+                <button onclick="registerPasskey()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#000; color:white;">
                     <i class='bx bx-plus'></i>
                 </button>
             </div>
@@ -427,12 +427,9 @@ $user_data = $u_res->fetch_assoc();
                             </div>
                         </div>
                         
-                        <form method="POST" onsubmit="return confirm('Hapus Passkey ini? Anda tidak bisa login menggunakan perangkat ini lagi.');">
-                            <input type="hidden" name="pk_id" value="<?php echo $pk['id']; ?>">
-                            <button type="submit" name="delete_passkey" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Passkey">
-                                <i class='bx bx-trash' style="font-size:1.2rem;"></i>
-                            </button>
-                        </form>
+                        <button type="button" onclick="openDeletePasskey('<?php echo $pk['id']; ?>')" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Passkey">
+                            <i class='bx bx-trash' style="font-size:1.2rem;"></i>
+                        </button>
                     </div>
                 <?php 
                     endwhile; 
@@ -597,6 +594,26 @@ $user_data = $u_res->fetch_assoc();
     </div>
 </div>
 
+<div class="popup-overlay" id="modalDeletePasskey" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box error">
+            <i class='bx bx-trash'></i>
+        </div>
+        
+        <h3 class="popup-title">Hapus Passkey?</h3>
+        <p class="popup-message">Anda tidak akan bisa login menggunakan metode ini lagi di perangkat terkait.</p>
+        
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button type="button" onclick="closeModal('modalDeletePasskey')" class="popup-btn">Batal</button>
+            
+            <form method="POST" style="width:100%;">
+                <input type="hidden" name="pk_id" id="delete_pk_id_target">
+                <button type="submit" name="delete_passkey" class="popup-btn error">Ya, Hapus</button>
+            </form>
+        </div>
+    </div>
+</div>
+
 <div class="popup-overlay" id="modalPasskeyName" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box success"><i class='bx bx-fingerprint'></i></div>
@@ -651,6 +668,18 @@ $user_data = $u_res->fetch_assoc();
             <button type="submit" id="btnSavePass" name="save_new_password" class="popup-btn success" disabled style="opacity:0.6; cursor:not-allowed;">Simpan Password</button>
         </form>
         <button onclick="closeModal('modalNewPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalGenericError" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box error">
+            <i class='bx bx-error-circle'></i>
+        </div>
+        <h3 class="popup-title">Perhatian</h3>
+        <p class="popup-message" id="generic_error_text">Terjadi kesalahan.</p>
+        
+        <button onclick="closeModal('modalGenericError')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer;">Tutup</button>
     </div>
 </div>
 
@@ -973,6 +1002,25 @@ $user_data = $u_res->fetch_assoc();
             icon.className = "bx bx-x"; // X sederhana
         }
     }
+
+    function openDeletePasskey(id) {
+        // 1. Masukkan ID yang diklik ke dalam input hidden di modal
+        document.getElementById('delete_pk_id_target').value = id;
+        
+        // 2. Buka Modal
+        openModal('modalDeletePasskey');
+    }
+
+    function showError(message) {
+        // Filter pesan error teknis agar lebih ramah (Opsional)
+        if (message.includes("timed out") || message.includes("not allowed")) {
+            message = "Proses dibatalkan atau waktu habis.";
+        }
+        
+        document.getElementById('generic_error_text').innerText = message;
+        openModal('modalGenericError');
+    }
+    
 
 
 
