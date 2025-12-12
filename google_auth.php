@@ -88,7 +88,7 @@ if (isset($_GET['code'])) {
 
                     // Opsi jika ingin dipisah (Menghasilkan 2 baris log di database)
                     logActivity($conn, $new_uid, "Pendaftaran Akun Baru via Google Berhasil");
-                    logActivity($conn, $new_uid, "Login Berhasil menggunakan Google di perangkat " . getDeviceName());
+                    logActivity($conn, $new_uid, "Login Berhasil menggunakan Google oleh perangkat " . getDeviceName());
                     logUserDevice($conn, $new_uid);
                     
                     processSSORedirect($conn, $new_uid, $redirect_to);

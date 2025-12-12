@@ -66,6 +66,11 @@ $google_client->setRedirectUri('https://valseltidbackup.ivanaldorino.web.id/goog
 $google_client->addScope('email');
 $google_client->addScope('profile');
 
+// KONFIGURASI GITHUB
+$github_client_id     = 'Ov23liVDnXwsY5RD1mkl';
+$github_client_secret = 'c710251fa6fb6208bc5910a35a85edf2534846d2';
+$github_redirect_uri  = 'https://valseltidbackup.ivanaldorino.web.id/auth_github.php';
+
 // --- CREDENTIALS LAIN ---
 $recaptcha_site_key   = '6LdEEyMsAAAAAPK75it3V-_wxwWESVqQebrdNzKF'; 
 $recaptcha_secret_key = '6LdEEyMsAAAAADK5A1RXPIHpHTi2lwx5CdnORfwB';

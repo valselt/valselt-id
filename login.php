@@ -1,6 +1,8 @@
 <?php
 require 'config.php'; 
 
+$github_auth_url = "https://github.com/login/oauth/authorize?client_id=" . $github_client_id . "&scope=user:email";
+
 if(isset($_GET['redirect_to'])){
     $_SESSION['sso_redirect_to'] = $_GET['redirect_to'];
 }
@@ -194,11 +196,17 @@ function processSSORedirect($conn, $uid, $target) {
                         <hr style="margin-top:-10px; border:0; border-top:1px solid #e5e7eb;">
                     </div>
 
-                    <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn-google">
-                        <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style="width:20px; margin-right:10px;">
-                        Sign in with Google
-                    </a>
+                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                        <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn-google">
+                            <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style="width:20px; margin-right:10px;">
+                            Sign in with Google
+                        </a>
 
+                        <a href="<?php echo $github_auth_url; ?>" class="btn-social">
+                            <i class='bx bxl-github' style="font-size:1.4rem; color:#24292e; margin-right:10px;"></i>Sign in with GitHub
+                        </a>
+                    </div>
+                    
                     <div class="auth-links">
                         Don't have an account? <a href="register.php">Sign Up</a>
                     </div>

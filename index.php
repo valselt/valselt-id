@@ -321,6 +321,35 @@ $user_data = $u_res->fetch_assoc();
                     </a>
                 <?php endif; ?>
             </div>
+
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+                <div style="display:flex; align-items:center;">
+                    <i class='bx bxl-github' style="font-size:28px; margin-right:12px; color:#333;"></i>
+                    <div>
+                        <div style="font-weight:500;">GitHub</div>
+                        <div style="font-size:0.85rem; color:var(--text-muted);">
+                            <?php if($user_data['github_id']): ?>
+                                Terhubung
+                            <?php else: ?>
+                                Tidak terhubung
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                </div>
+
+                <?php if($user_data['github_id']): ?>
+                    <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;">
+                        <i class='bx bx-check'></i> Linked
+                    </button>
+                <?php else: ?>
+                    <?php 
+                    $github_link_url = "https://github.com/login/oauth/authorize?client_id=" . $github_client_id . "&scope=user:email"; 
+                    ?>
+                    <a href="<?php echo $github_link_url; ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">
+                        Link Account
+                    </a>
+                <?php endif; ?>
+            </div>
         </div>
 
         <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
