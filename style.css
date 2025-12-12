@@ -791,7 +791,130 @@ a:hover { color: var(--primary); }
 
 
 @media (max-width: 480px) {
-  .profile-card { 
-        padding: 20px; 
+
+    .valselt-container {
+        padding: 10px;
+        margin: 20px auto;
+    }
+
+    .profile-card {
+        padding: 22px !important;
+        border-radius: 18px;
+    }
+
+    .avatar-wrapper {
+        width: 90px;
+        height: 90px;
+    }
+
+    .avatar-placeholder {
+        font-size: 2.2rem !important;
+    }
+
+    .profile-card h2 {
+        font-size: 1.6rem !important;
+    }
+
+    .profile-card p {
+        font-size: 0.9rem !important;
+    }
+
+    .form-group {
+        margin-bottom: 12px;
+    }
+
+    .btn {
+        padding: 12px;
+        font-size: 0.85rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .accordion-header {
+        padding: 12px 14px;
+        font-size: 0.9rem;
+    }
+
+    .accordion-content-inside {
+        padding: 15px;
+    }
+
+    .accordion-content {
+        gap: 6px;
+    }
+
+    .passkey-title h4,
+    .accordion-content-inside h4 {
+        font-size: 1rem;
+    }
+}
+
+@media (max-width: 480px) {
+
+    #modalLogs table {
+        font-size: 0.75rem;
+    }
+
+    #modalLogs table tr td {
+        display: block;
+        text-align: left !important;
+        padding: 8px 5px;
+        border-bottom: none !important;
+    }
+
+    #modalLogs table tr {
+        margin-bottom: 12px;
+        background: #fff;
+        border-radius: 8px;
+        padding: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+    }
+
+    #modalLogs thead { 
+        display: none; 
+    }
+}
+
+@media (max-width: 480px) {
+
+    .popup-box {
+        padding: 22px !important;
+        max-width: 92% !important;
+    }
+
+    .popup-title {
+        font-size: 1.5rem !important;
+    }
+
+    .popup-message {
+        font-size: 0.9rem !important;
+    }
+
+    .popup-btn {
+        padding: 12px !important;
+        font-size: 0.9rem !important;
+    }
+
+    .popup-icon-box {
+        width: 55px !important;
+        height: 55px !important;
+        font-size: 1.8rem !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .form-control {
+        padding: 12px 14px;
+        font-size: 0.9rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .logo-dashboard {
+        height: 30px;
+    }
+    
+    .valselt-header p {
+        font-size: 0.8rem;
     }
 }
