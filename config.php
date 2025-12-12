@@ -240,4 +240,44 @@ function sendOTPEmail($toEmail, $otp) {
         return true;
     } catch (Exception $e) { return false; }
 }
-?>
+
+function getDeviceName() {
+    $userAgent = $_SERVER['HTTP_USER_AGENT'];
+    $os = "Unknown OS";
+    $browser = "Unknown Browser";
+
+    // Deteksi OS
+    if (preg_match('/windows nt 10/i', $userAgent))     $os = 'Windows 10/11';
+    elseif (preg_match('/windows nt 6.3/i', $userAgent)) $os = 'Windows 8.1';
+    elseif (preg_match('/macintosh|mac os x/i', $userAgent)) $os = 'Mac OS';
+    elseif (preg_match('/linux/i', $userAgent))         $os = 'Linux';
+    elseif (preg_match('/android/i', $userAgent))       $os = 'Android';
+    elseif (preg_match('/iphone/i', $userAgent))        $os = 'iPhone';
+    elseif (preg_match('/ipad/i', $userAgent))          $os = 'iPad';
+
+    // Deteksi Browser
+    if (preg_match('/MSIE/i', $userAgent) && !preg_match('/Opera/i', $userAgent)) $browser = 'Internet Explorer';
+    elseif (preg_match('/Firefox/i', $userAgent)) $browser = 'Firefox';
+    elseif (preg_match('/Chrome/i', $userAgent)) $browser = 'Chrome';
+    elseif (preg_match('/Safari/i', $userAgent)) $browser = 'Safari';
+    elseif (preg_match('/Opera/i', $userAgent))  $browser = 'Opera';
+
+    return "$os - $browser";
+}
+
+function logUserDevice($conn, $uid) {
+    $device = $conn->real_escape_string(getDeviceName());
+    $ip = $_SERVER['REMOTE_ADDR'];
+    $sess_id = session_id();
+
+    // Cek apakah session ini sudah tercatat?
+    $check = $conn->query("SELECT id FROM user_devices WHERE session_id='$sess_id'");
+    
+    if ($check->num_rows > 0) {
+        // Update waktu login terakhir
+        $conn->query("UPDATE user_devices SET last_login=NOW(), device_name='$device', ip_address='$ip' WHERE session_id='$sess_id'");
+    } else {
+        // Insert device baru
+        $conn->query("INSERT INTO user_devices (user_id, device_name, ip_address, session_id, last_login) VALUES ('$uid', '$device', '$ip', '$sess_id', NOW())");
+    }
+}

@@ -44,6 +44,9 @@ if (isset($_POST['login'])) {
             } else {
                 $_SESSION['valselt_user_id'] = $row['id'];
                 $_SESSION['valselt_username'] = $row['username'];
+                // [TAMBAHAN BARU] CATAT DEVICE
+                logUserDevice($conn, $row['id']); 
+                // ----------------------------
                 // --- TAMBAHAN LOGIKA REMEMBER ME ---
                 if (isset($_POST['remember_me'])) {
                     // 1. Buat Token Random
