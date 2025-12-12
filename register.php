@@ -147,10 +147,10 @@ if (isset($_POST['register'])) {
                         <label class="form-label">Password</label>
                         <input type="password" name="password" id="password" class="form-control" required placeholder="Strong password">
                         <div class="password-requirements" id="pwd-req-box">
-                            <div class="req-item" id="req-len"><i class='bx bx-check'></i> 6+ Characters</div>
-                            <div class="req-item" id="req-upper"><i class='bx bx-check'></i> Uppercase (A-Z)</div>
-                            <div class="req-item" id="req-num"><i class='bx bx-check'></i> Number (0-9)</div>
-                            <div class="req-item" id="req-sym"><i class='bx bx-check'></i> Symbol (!@#$)</div>
+                            <div class="req-item" id="req-len"><i class='bx bx-x'></i> 6+ Characters</div>
+                            <div class="req-item" id="req-upper"><i class='bx bx-x'></i> Uppercase (A-Z)</div>
+                            <div class="req-item" id="req-num"><i class='bx bx-x'></i> Number (0-9)</div>
+                            <div class="req-item" id="req-sym"><i class='bx bx-x'></i> Symbol (!@#$)</div>
                         </div>
                     </div>
 
@@ -284,7 +284,7 @@ if (isset($_POST['register'])) {
                 icon.className = 'bx bx-check';
             } else {
                 el.className = 'req-item invalid';
-                icon.className = 'bx bx-check'; 
+                icon.className = 'bx bx-x'; 
             }
         }
 

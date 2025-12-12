@@ -506,10 +506,11 @@ $user_data = $u_res->fetch_assoc();
             
             <div class="password-requirements" id="pwd-req-box-modal" style="text-align:left; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; margin-bottom:15px; font-size:0.85rem;">
 
-                <div class="req-item" id="req-len" style="color:#6b7280; margin-bottom:2px;"><i class='bx bx-check'></i> 6+ Karakter</div>
-                <div class="req-item" id="req-upper" style="color:#6b7280; margin-bottom:2px;"><i class='bx bx-check'></i> Huruf Besar (A-Z)</div>
-                <div class="req-item" id="req-num" style="color:#6b7280; margin-bottom:2px;"><i class='bx bx-check'></i> Angka (0-9)</div>
-                <div class="req-item" id="req-sym" style="color:#6b7280;"><i class='bx bx-check'></i> Simbol (!@#$)</div>
+                <div class="req-item invalid" id="req-len" style="margin-bottom:2px;"><i class='bx bx-x'></i> 6+ Karakter</div>
+                <div class="req-item invalid" id="req-upper" style="margin-bottom:2px;"><i class='bx bx-x'></i> Huruf Besar (A-Z)</div>
+                <div class="req-item invalid" id="req-num" style="margin-bottom:2px;"><i class='bx bx-x'></i> Angka (0-9)</div>
+                <div class="req-item invalid" id="req-sym" style="margin-bottom:2px;"><i class='bx bx-x'></i> Simbol (!@#$)</div>
+
             </div>
 
             <button type="submit" id="btnSavePass" name="save_new_password" class="popup-btn success" disabled style="opacity:0.6; cursor:not-allowed;">Simpan Password</button>
@@ -775,8 +776,7 @@ $user_data = $u_res->fetch_assoc();
         });
     }
 
-    // --- LOGIC VALIDASI PASSWORD INTERAKTIF ---
-    // --- FINAL PASSWORD VALIDATION SCRIPT (MATCH REGISTER.PHP) ---
+    // --- FINAL PASSWORD VALIDATION SCRIPT (MATCH REGISTER.PHP STYLE) ---
 
     const newPassInput = document.getElementById('new_password_input');
     const reqBoxModal  = document.getElementById('pwd-req-box-modal');
@@ -785,15 +785,12 @@ $user_data = $u_res->fetch_assoc();
     // Event listeners
     newPassInput.addEventListener('focus', function() { checkPwd(this.value); });
     newPassInput.addEventListener('keyup', function() { checkPwd(this.value); });
-
-    // Jangan pakai display:none — cukup remove class show
     newPassInput.addEventListener('blur', function() { 
         reqBoxModal.classList.remove("show");
     });
 
-    // Password checker
+    // Main checker
     function checkPwd(val) {
-
         const isLen   = val.length >= 6;
         const isUpper = /[A-Z]/.test(val);
         const isNum   = /[0-9]/.test(val);
@@ -806,7 +803,7 @@ $user_data = $u_res->fetch_assoc();
 
         const isValid = isLen && isUpper && isNum && isSym;
 
-        // Enable / Disable Save button
+        // Enable / Disable button
         if (isValid) {
             btnSavePass.disabled = false;
             btnSavePass.style.opacity = "1";
@@ -817,7 +814,7 @@ $user_data = $u_res->fetch_assoc();
             btnSavePass.style.cursor = "not-allowed";
         }
 
-        // SHOW / HIDE box (match register.php behaviour)
+        // Show / hide requirement box
         if (val.length === 0 || isValid) {
             reqBoxModal.classList.remove("show");
         } else {
@@ -825,21 +822,23 @@ $user_data = $u_res->fetch_assoc();
         }
     }
 
-    // Update requirement UI
+    // Matches register.php style exactly
     function updateReqUI(id, isValid) {
-        const el   = document.getElementById(id);
+        const el = document.getElementById(id);
         const icon = el.querySelector("i");
 
         if (isValid) {
             el.classList.add("valid");
             el.classList.remove("invalid");
-            icon.className = "bx bx-check-circle";
+            icon.className = "bx bx-check"; // centang hijau
         } else {
-            el.classList.remove("valid");
             el.classList.add("invalid");
-            icon.className = "bx bx-circle";
+            el.classList.remove("valid");
+            icon.className = "bx bx-x"; // X sederhana
         }
     }
+
+
 
 </script>
 
