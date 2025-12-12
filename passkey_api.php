@@ -5,7 +5,6 @@ ob_start();
 require 'config.php';
 require 'vendor/autoload.php';
 
-// 2. CEK SESSION
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
@@ -14,20 +13,16 @@ header('Content-Type: application/json');
 
 // --- HELPER FUNCTIONS ---
 
-// Output JSON Bersih
 function sendJson($data) {
     ob_clean(); 
     echo json_encode($data);
     exit();
 }
 
-// Konversi Base64URL (JS) ke Binary (PHP)
-// INI SOLUSI ERROR "INVALID OFFSET OR LENGTH"
 function base64url_decode($data) {
     return base64_decode(strtr($data, '-_', '+/'));
 }
 
-// Rekursif Konversi Binary ke Base64 (Untuk Output ke JS)
 function recursiveConvert($data) {
     if (is_array($data)) {
         return array_map('recursiveConvert', $data);
@@ -44,10 +39,36 @@ function recursiveConvert($data) {
     }
     return $data;
 }
+
+// FUNGSI DETEKSI PENYEDIA PASSKEY (HEURISTIK)
+function detectCredentialSource() {
+    $ua = $_SERVER['HTTP_USER_AGENT'] ?? '';
+    
+    // 1. Deteksi Ekosistem Utama
+    if (stripos($ua, 'Android') !== false) {
+        return "Google Password Manager (Android)";
+    }
+    if (stripos($ua, 'iPhone') !== false || stripos($ua, 'iPad') !== false) {
+        return "iCloud Keychain (iOS)";
+    }
+    if (stripos($ua, 'Macintosh') !== false) {
+        return "iCloud Keychain (macOS)";
+    }
+    if (stripos($ua, 'Windows') !== false) {
+        // Cek Browser di Windows
+        if (stripos($ua, 'Edg') !== false) return "Windows Hello (Edge)";
+        if (stripos($ua, 'Chrome') !== false) return "Windows Hello / Chrome";
+        return "Windows Hello";
+    }
+    if (stripos($ua, 'Linux') !== false) {
+        return "Linux / Browser Key";
+    }
+
+    return "Browser Passkey";
+}
 // ------------------------
 
 try {
-    // KONFIGURASI
     $rpName = 'Valselt ID';
     $rpId = 'valseltid.ivanaldorino.web.id'; 
 
@@ -57,12 +78,11 @@ try {
 
     $webAuthn = new \lbuchs\WebAuthn\WebAuthn($rpName, $rpId);
 
-    // Ambil Input
     $post = json_decode(file_get_contents('php://input'));
     $fn = $_GET['fn'] ?? '';
 
     // ==================================================================
-    // 1. REGISTER: DAPATKAN CHALLENGE
+    // 1. REGISTER: GET CHALLENGE
     // ==================================================================
     if ($fn === 'getRegisterArgs') {
         if (!isset($_SESSION['valselt_user_id'])) throw new Exception("Login required");
@@ -86,44 +106,50 @@ try {
             $existingIds
         );
 
-        // Simpan Challenge sebagai String Binary
         $_SESSION['challenge'] = $webAuthn->getChallenge()->getBinaryString();
-        
         sendJson(recursiveConvert($createArgs));
     }
 
     // ==================================================================
-    // 2. REGISTER: PROSES VERIFIKASI
+    // 2. REGISTER: PROCESS & SIMPAN NAMA PENYEDIA
     // ==================================================================
     elseif ($fn === 'processRegister') {
         if (!isset($_SESSION['valselt_user_id'])) throw new Exception("Login required");
 
-        // PERBAIKAN UTAMA: Gunakan base64url_decode buatan kita
         $clientDataJSON = base64url_decode($post->clientDataJSON);
         $attestationObject = base64url_decode($post->attestationObject);
-        
         $challenge = $_SESSION['challenge'];
+
+        // AMBIL NAMA CUSTOM DARI USER (JIKA ADA)
+        $userCustomName = isset($post->passkeyName) ? trim(strip_tags($post->passkeyName)) : '';
 
         // Validasi
         $data = $webAuthn->processCreate($clientDataJSON, $attestationObject, $challenge, false, true, false);
 
-        // Simpan ke DB
         $uid = $_SESSION['valselt_user_id'];
         $credId = base64_encode($data->credentialId);
         $pubKey = $data->credentialPublicKey;
         
-        // Cek duplikasi
+        // LOGIKA PENAMAAN: 
+        // Jika user isi nama -> Pakai nama user.
+        // Jika kosong -> Pakai deteksi otomatis.
+        if (!empty($userCustomName)) {
+            $sourceName = $userCustomName;
+        } else {
+            $sourceName = detectCredentialSource(); 
+        }
+
         $cek = $conn->query("SELECT id FROM user_passkeys WHERE credential_id='$credId'");
         if ($cek->num_rows > 0) {
             throw new Exception("Passkey ini sudah terdaftar.");
         }
 
-        $stmt = $conn->prepare("INSERT INTO user_passkeys (user_id, credential_id, public_key) VALUES (?, ?, ?)");
-        $stmt->bind_param("iss", $uid, $credId, $pubKey);
+        $stmt = $conn->prepare("INSERT INTO user_passkeys (user_id, credential_id, public_key, credential_source) VALUES (?, ?, ?, ?)");
+        $stmt->bind_param("isss", $uid, $credId, $pubKey, $sourceName);
         
         if ($stmt->execute()) {
             $devName = function_exists('getDeviceName') ? getDeviceName() : 'Unknown Device';
-            logActivity($conn, $uid, "Menambahkan Passkey Baru di " . $devName);
+            logActivity($conn, $uid, "Menambahkan Passkey ($sourceName) di " . $devName);
             sendJson(['status' => 'success', 'msg' => 'Passkey berhasil didaftarkan!']);
         } else {
             throw new Exception("Database Error");
@@ -131,7 +157,7 @@ try {
     }
 
     // ==================================================================
-    // 3. LOGIN: DAPATKAN CHALLENGE
+    // 3. LOGIN: GET CHALLENGE
     // ==================================================================
     elseif ($fn === 'getLoginArgs') {
         $getArgs = $webAuthn->getGetArgs();
@@ -140,15 +166,13 @@ try {
     }
 
     // ==================================================================
-    // 4. LOGIN: PROSES VERIFIKASI
+    // 4. LOGIN: PROCESS
     // ==================================================================
     elseif ($fn === 'processLogin') {
-        // PERBAIKAN UTAMA: Gunakan base64url_decode buatan kita
         $clientDataJSON = base64url_decode($post->clientDataJSON);
         $authenticatorData = base64url_decode($post->authenticatorData);
         $signature = base64url_decode($post->signature);
         $credentialId = base64url_decode($post->id);
-        
         $challenge = $_SESSION['challenge'];
 
         $id_for_db = base64_encode($credentialId);
@@ -161,7 +185,6 @@ try {
         $row = $q->fetch_assoc();
         $credentialPublicKey = $row['public_key'];
         
-        // Verifikasi
         if ($webAuthn->processGet($clientDataJSON, $authenticatorData, $signature, $credentialPublicKey, $challenge)) {
             $user_id = $row['user_id'];
             $uq = $conn->query("SELECT * FROM users WHERE id='$user_id'");
@@ -170,8 +193,10 @@ try {
             $_SESSION['valselt_user_id'] = $user['id'];
             $_SESSION['valselt_username'] = $user['username'];
             
+            $sourceName = $row['credential_source'] ?? 'Unknown Passkey';
             $devName = function_exists('getDeviceName') ? getDeviceName() : 'Unknown Device';
-            logActivity($conn, $user_id, "Login via Passkey di " . $devName);
+            
+            logActivity($conn, $user_id, "Login via $sourceName di " . $devName);
             
             if(function_exists('logUserDevice')) {
                 logUserDevice($conn, $user_id);

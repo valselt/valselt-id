@@ -378,7 +378,7 @@ $user_data = $u_res->fetch_assoc();
                 </div>
 
                 <button onclick="registerPasskey()" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#000; color:white;">
-                    <i class='bx bx-plus'></i> Buat Passkey
+                    <i class='bx bx-plus'></i>
                 </button>
             </div>
 
@@ -389,18 +389,37 @@ $user_data = $u_res->fetch_assoc();
                 
                 if ($q_pk->num_rows > 0):
                     while($pk = $q_pk->fetch_assoc()):
-                        // Format Tanggal
                         $pk_date = date('d M Y, H:i', strtotime($pk['created_at']));
+                        $source = $pk['credential_source'] ? htmlspecialchars($pk['credential_source']) : 'Passkey Credential';
+                        
+                        // Tentukan Icon & Warna Berdasarkan Nama
+                        $iconClass = 'bx-key';
+                        $bgColor = '#e0f2fe'; // Default Biru
+                        $iconColor = '#0284c7';
+
+                        if (stripos($source, 'Google') !== false || stripos($source, 'Android') !== false) {
+                            $iconClass = 'bxl-google';
+                            $bgColor = '#dcfce7'; // Hijau
+                            $iconColor = '#166534';
+                        } elseif (stripos($source, 'iCloud') !== false || stripos($source, 'Apple') !== false) {
+                            $iconClass = 'bxl-apple';
+                            $bgColor = '#f3f4f6'; // Abu
+                            $iconColor = '#1f2937';
+                        } elseif (stripos($source, 'Windows') !== false) {
+                            $iconClass = 'bxl-windows';
+                            $bgColor = '#dbeafe'; // Biru Win
+                            $iconColor = '#2563eb';
+                        }
                 ?>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
                         <div style="display:flex; align-items:center;">
-                            <div style="width:40px; height:40px; background:#e0f2fe; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:#0284c7;">
-                                <i class='bx bx-key' style="font-size:1.2rem;"></i>
+                            <div style="width:40px; height:40px; background:<?php echo $bgColor; ?>; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:<?php echo $iconColor; ?>;">
+                                <i class='bx <?php echo $iconClass; ?>' style="font-size:1.4rem;"></i>
                             </div>
                             
                             <div>
                                 <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);">
-                                    Passkey Credential
+                                    <?php echo $source; ?>
                                 </div>
                                 <div style="font-size:0.8rem; color:var(--text-muted);">
                                     Dibuat: <?php echo $pk_date; ?>
@@ -420,7 +439,7 @@ $user_data = $u_res->fetch_assoc();
                 else: 
                 ?>
                     <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
-                        Belum ada Passkey. Buat satu untuk login lebih cepat dengan Google Password Manager, FaceID, atau Windows Hello.
+                        Belum ada Passkey Tersimpan. Klik "+" untuk menambahkannya.
                     </div>
                 <?php endif; ?>
             </div>
@@ -575,6 +594,19 @@ $user_data = $u_res->fetch_assoc();
             Lupa password? <a href="#" onclick="switchToOTP()" style="color:var(--primary); font-weight:600;">Gunakan OTP Email</a>
         </div>
         <button onclick="closeModal('modalVerifyPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalPasskeyName" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box success"><i class='bx bx-fingerprint'></i></div>
+        <h3 class="popup-title">Beri Nama Passkey</h3>
+        <p class="popup-message">Passkey berhasil dibuat! Beri nama agar mudah dikenali (Contoh: Proton Pass, Yubikey).</p>
+        
+        <input type="text" id="passkey_name_input" class="form-control" placeholder="Nama Passkey (Opsional)" style="margin-bottom:15px; text-align:center;">
+        
+        <button onclick="submitPasskeyData()" class="popup-btn success">Simpan</button>
+        <button onclick="closeModal('modalPasskeyName')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
     </div>
 </div>
 

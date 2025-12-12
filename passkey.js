@@ -19,16 +19,18 @@ function base64urlToBuffer(base64) {
     return bytes.buffer;
 }
 
+let tempAttestation = null;
+
 // --- FUNGSI REGISTER PASSKEY ---
 async function registerPasskey() {
     try {
-        // 1. Minta Challenge dari Server
+        // 1. Minta Challenge
         const rep = await fetch('passkey_api.php?fn=getRegisterArgs');
         const args = await rep.json();
 
         if (args.status === 'error') throw new Error(args.message);
 
-        // Konversi format server ke format browser
+        // Konversi format
         args.publicKey.user.id = base64urlToBuffer(args.publicKey.user.id);
         args.publicKey.challenge = base64urlToBuffer(args.publicKey.challenge);
         if (args.publicKey.excludeCredentials) {
@@ -40,28 +42,57 @@ async function registerPasskey() {
         // 2. Tampilkan Pop-up Browser/Fingerprint
         const cred = await navigator.credentials.create(args);
 
-        // 3. Kirim Hasil ke Server
-        const attestationObj = {
+        // 3. SIMPAN DATA KE VARIABEL SEMENTARA
+        tempAttestation = {
             clientDataJSON: bufferToBase64url(cred.response.clientDataJSON),
             attestationObject: bufferToBase64url(cred.response.attestationObject)
         };
 
+        // 4. BUKA MODAL INPUT NAMA (Jangan kirim ke server dulu)
+        document.getElementById('passkey_name_input').value = ""; // Reset input
+        openModal('modalPasskeyName');
+        
+        // Fokus ke input field setelah modal muncul
+        setTimeout(() => document.getElementById('passkey_name_input').focus(), 100);
+
+    } catch (e) {
+        alert("Batal / Gagal membuat Passkey: " + e.message);
+    }
+}
+
+async function submitPasskeyData() {
+    if (!tempAttestation) return;
+
+    const customName = document.getElementById('passkey_name_input').value;
+    const btn = document.querySelector('#modalPasskeyName .popup-btn.success');
+    
+    // Tambahkan nama ke objek data
+    tempAttestation.passkeyName = customName;
+
+    btn.innerText = "Menyimpan...";
+    btn.disabled = true;
+
+    try {
         const verifyRep = await fetch('passkey_api.php?fn=processRegister', {
             method: 'POST',
-            body: JSON.stringify(attestationObj)
+            body: JSON.stringify(tempAttestation)
         });
         
         const verifyResult = await verifyRep.json();
         
         if (verifyResult.status === 'success') {
-            alert("Passkey Berhasil Didaftarkan!");
-            location.reload();
+            closeModal('modalPasskeyName');
+            // Refresh halaman atau load ulang list passkey
+            window.location.reload(); 
         } else {
             alert("Gagal: " + verifyResult.message);
+            btn.innerText = "Simpan";
+            btn.disabled = false;
         }
-
     } catch (e) {
-        alert("Gagal membuat Passkey: " + e.message);
+        alert("Error Server: " + e.message);
+        btn.innerText = "Simpan";
+        btn.disabled = false;
     }
 }
 
