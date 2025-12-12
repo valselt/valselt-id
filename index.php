@@ -884,14 +884,45 @@ if (isset($_POST['send_logs_email'])) {
     // --- FUNGSI UMUM BUKA/TUTUP MODAL ---
     function openModal(id) {
         const el = document.getElementById(id);
+
+        // Siapkan posisi awal animasi
         el.style.display = 'flex';
-        setTimeout(() => el.style.opacity = '1', 10);
+        el.style.opacity = '0';
+        el.style.backdropFilter = 'blur(0px)';
+
+        const box = el.querySelector('.popup-box');
+        box.style.transform = 'scale(0.92) translateY(10px)';
+        box.style.opacity = '0';
+
+        // Trigger animasi
+        requestAnimationFrame(() => {
+            el.style.transition = 'opacity .35s ease, backdrop-filter .45s ease';
+            el.style.opacity = '1';
+            el.style.backdropFilter = 'blur(20px)';
+
+            box.style.transition =
+                'transform .55s cubic-bezier(0.16, 1, 0.3, 1), opacity .35s ease';
+            box.style.transform = 'scale(1) translateY(0)';
+            box.style.opacity = '1';
+        });
     }
+
     function closeModal(id) {
         const el = document.getElementById(id);
+        const box = el.querySelector('.popup-box');
+
+        // Animasi keluar
         el.style.opacity = '0';
-        setTimeout(() => el.style.display = 'none', 300);
+        el.style.backdropFilter = 'blur(0px)';
+        box.style.transform = 'scale(0.93) translateY(12px)';
+        box.style.opacity = '0';
+
+        // Setelah animasi selesai → sembunyikan
+        setTimeout(() => {
+            el.style.display = 'none';
+        }, 350);
     }
+
 
     // 1. Tombol Ganti Password Ditekan
     function openVerifyPassModal() {

@@ -39,10 +39,24 @@ if (isset($_SESSION['popup_status']) && isset($_SESSION['popup_message'])) {
     </div>
 
     <script>
+        // OPEN animation
+        document.addEventListener("DOMContentLoaded", () => {
+            const popup = document.getElementById('customPopup');
+            popup.classList.add("show");
+        });
+
+        // CLOSE with Apple-like effect
         function closePopup() {
             const popup = document.getElementById('customPopup');
+            const box = popup.querySelector('.popup-box');
+
+            // Animasi keluar
             popup.style.opacity = '0';
-            setTimeout(() => { popup.remove(); }, 300);
+            popup.style.backdropFilter = 'blur(0px)';
+            box.style.transform = 'scale(0.93) translateY(12px)';
+            box.style.opacity = '0';
+
+            setTimeout(() => popup.remove(), 350);
         }
 
         <?php if ($redirect): ?>
@@ -51,7 +65,7 @@ if (isset($_SESSION['popup_status']) && isset($_SESSION['popup_message'])) {
             const btn = document.getElementById('popupBtn');
             const targetUrl = "<?php echo $redirect; ?>";
 
-            if(btn) {
+            if (btn) {
                 btn.disabled = true;
                 btn.style.opacity = "0.7";
                 btn.innerText = `Redirecting in ${seconds}...`;
@@ -68,6 +82,7 @@ if (isset($_SESSION['popup_status']) && isset($_SESSION['popup_message'])) {
         });
         <?php endif; ?>
     </script>
+
 <?php
     unset($_SESSION['popup_status']);
     unset($_SESSION['popup_message']);
