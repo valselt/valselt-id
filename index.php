@@ -7,6 +7,12 @@ if (!isset($_SESSION['valselt_user_id'])) {
 
 $user_id = $_SESSION['valselt_user_id'];
 
+// --- FUNGSI BANTUAN LOGGING ---
+function logActivity($conn, $uid, $action) {
+    $action = $conn->real_escape_string($action);
+    $conn->query("INSERT INTO logsuser (id_user, behaviour) VALUES ('$uid', '$action')");
+}
+
 // --- AJAX HANDLER UNTUK GANTI PASSWORD ---
 if (isset($_POST['ajax_action'])) {
     header('Content-Type: application/json');
@@ -118,6 +124,7 @@ if (isset($_POST['save_new_password'])) {
     } else {
         $hash = password_hash($new_pass, PASSWORD_DEFAULT);
         $conn->query("UPDATE users SET password='$hash' WHERE id='$user_id'");
+        logActivity($conn, $user_id, "Password diubah");
         $_SESSION['popup_status'] = 'success';
         $_SESSION['popup_message'] = 'Password berhasil diganti!';
     }
@@ -128,47 +135,76 @@ if (isset($_POST['save_new_password'])) {
 
 
 
-// --- UPDATE PROFILE LOGIC ---
 if (isset($_POST['update_profile'])) {
     $new_username = htmlspecialchars($_POST['username']);
     $new_email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    $new_pass = $_POST['password'];
+    // (Password di form utama sudah dihapus HTML-nya, tapi logic PHP tetap dijaga untuk keamanan back-end)
+    $new_pass = isset($_POST['password']) ? $_POST['password'] : '';
     
+    // AMBIL DATA LAMA UNTUK PERBANDINGAN LOG
+    $q_curr = $conn->query("SELECT username, email FROM users WHERE id='$user_id'");
+    $curr_data = $q_curr->fetch_assoc();
+
+    // 1. LOGIC GANTI FOTO
     if (!empty($_POST['cropped_image'])) {
         $data = $_POST['cropped_image'];
-        list($type, $data) = explode(';', $data);
-        list(, $data)      = explode(',', $data);
-        $data = base64_decode($data);
-        $image = imagecreatefromstring($data);
-        
-        if ($image !== false) {
-            ob_start();
-            imagewebp($image, null, 80);
-            $webp_data = ob_get_contents();
-            ob_end_clean();
-            imagedestroy($image);
+        if (strpos($data, 'base64') !== false) {
+            list($type, $data) = explode(';', $data);
+            list(, $data)      = explode(',', $data);
+            $data = base64_decode($data);
+            $image = imagecreatefromstring($data);
+            
+            if ($image !== false) {
+                ob_start();
+                imagewebp($image, null, 80);
+                $webp_data = ob_get_contents();
+                ob_end_clean();
+                imagedestroy($image);
 
-            $timestamp = date('Y-m-d_H-i-s');
-            $s3_key = "photoprofile/{$timestamp}_{$user_id}.webp";
+                $timestamp = date('Y-m-d_H-i-s');
+                $s3_key = "photoprofile/{$timestamp}_{$user_id}.webp";
 
-            try {
-                $result = $s3->putObject([
-                    'Bucket' => $minio_bucket,
-                    'Key'    => $s3_key,
-                    'Body'   => $webp_data,
-                    'ContentType' => 'image/webp',
-                    'ACL'    => 'public-read'
-                ]);
-                $foto_url = $result['ObjectURL'];
-                $conn->query("UPDATE users SET profile_pic='$foto_url' WHERE id='$user_id'");
-            } catch (AwsException $e) {
-                $_SESSION['popup_status'] = 'error';
-                $_SESSION['popup_message'] = "Upload Gagal: " . $e->getMessage();
+                try {
+                    $result = $s3->putObject([
+                        'Bucket' => $minio_bucket,
+                        'Key'    => $s3_key,
+                        'Body'   => $webp_data,
+                        'ContentType' => 'image/webp',
+                        'ACL'    => 'public-read'
+                    ]);
+                    $foto_url = $result['ObjectURL'];
+                    $conn->query("UPDATE users SET profile_pic='$foto_url' WHERE id='$user_id'");
+                    
+                    // LOG PERGANTIAN FOTO
+                    logActivity($conn, $user_id, "Foto Profil diubah");
+
+                } catch (AwsException $e) {
+                    $_SESSION['popup_status'] = 'error';
+                    $_SESSION['popup_message'] = "Upload Gagal: " . $e->getMessage();
+                }
             }
         }
     }
 
+    // 2. LOGIC GANTI USERNAME/EMAIL
     $conn->query("UPDATE users SET username='$new_username', email='$new_email' WHERE id='$user_id'");
+    
+    // LOG PERUBAHAN DATA
+    if ($curr_data['username'] != $new_username) {
+        logActivity($conn, $user_id, "Username Diganti dari " . $curr_data['username'] . " menjadi " . $new_username);
+    }
+    if ($curr_data['email'] != $new_email) {
+        logActivity($conn, $user_id, "Email Diganti dari " . $curr_data['email'] . " menjadi " . $new_email);
+    }
+
+    // 3. LOGIC GANTI PASSWORD (VIA FORM PROFIL - LEGACY)
+    if (!empty($new_pass)) {
+        $hash = password_hash($new_pass, PASSWORD_DEFAULT);
+        $conn->query("UPDATE users SET password='$hash' WHERE id='$user_id'");
+        
+        // LOG PASSWORD
+        logActivity($conn, $user_id, "Mengganti password melalui edit profil");
+    }
     
     $_SESSION['valselt_username'] = $new_username;
     $_SESSION['popup_status'] = 'success';
@@ -179,7 +215,14 @@ if (isset($_POST['update_profile'])) {
 
 // --- HAPUS AKUN ---
 if (isset($_POST['delete_account'])) {
+    // LOG SEBELUM MENGHAPUS
+    logActivity($conn, $user_id, "Melakukan penghapusan akun permanen");
+
     $conn->query("DELETE FROM users WHERE id='$user_id'");
+    if (isset($_COOKIE['remember_token'])) {
+        setcookie('remember_token', '', time() - 3600, "/");
+        unset($_COOKIE['remember_token']);
+    }
     session_destroy();
     header("Location: login.php"); exit();
 }
