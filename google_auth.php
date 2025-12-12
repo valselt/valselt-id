@@ -28,7 +28,7 @@ if (isset($_GET['code'])) {
             $stmt->bind_param("si", $g_id, $uid);
             
             if ($stmt->execute()) {
-                logActivity($conn, $uid, "Akun Google Ditautkan di Perangkat " . getDeviceName());
+                logActivity($conn, $uid, "Akun Google Berhasil Ditautkan di Perangkat " . getDeviceName());
                 $_SESSION['popup_status'] = 'success';
                 $_SESSION['popup_message'] = 'Akun Google berhasil ditautkan!';
             } else {

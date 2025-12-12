@@ -76,6 +76,9 @@ if (empty($email)) {
     }
 }
 
+// --- AMBIL NAMA PERANGKAT ---
+$deviceInfo = getDeviceName(); 
+
 // ============================================================================
 // LOGIKA UTAMA: MEMBEDAKAN ANTARA "LOGIN" DAN "LINKING AKUN"
 // ============================================================================
@@ -96,11 +99,10 @@ if (isset($_SESSION['valselt_user_id'])) {
     }
 
     // 2. Lakukan Tautan (Update Database)
-    // Kita TIDAK peduli emailnya beda. Kita percaya user yang sedang login ini pemiliknya.
     $conn->query("UPDATE users SET github_id='$github_id' WHERE id='$current_user_id'");
 
     // 3. Log dan Redirect
-    logActivity($conn, $current_user_id, "Berhasil menautkan akun GitHub ($username)");
+    logActivity($conn, $current_user_id, "Akun GitHub  ($username) Berhasil Ditautkan di perangkat $deviceInfo");
     
     $_SESSION['popup_status'] = 'success';
     $_SESSION['popup_message'] = 'Akun GitHub berhasil ditautkan!';
@@ -121,7 +123,7 @@ else {
         $_SESSION['valselt_user_id'] = $row['id'];
         $_SESSION['valselt_username'] = $row['username'];
         
-        logActivity($conn, $row['id'], "Login via GitHub");
+        logActivity($conn, $row['id'], "Login Berhasil menggunakan GitHub oleh perangkat  $deviceInfo");
         logUserDevice($conn, $row['id']);
         
         header("Location: index.php");
@@ -133,16 +135,16 @@ else {
         $q_email = $conn->query("SELECT id FROM users WHERE email='$email'");
         
         if ($q_email->num_rows > 0) {
-            // LINK BY EMAIL (Opsional: Bisa dihapus jika ingin strict)
+            // LINK BY EMAIL
             $row = $q_email->fetch_assoc();
             $uid = $row['id'];
             
             $conn->query("UPDATE users SET github_id='$github_id' WHERE id='$uid'");
             
             $_SESSION['valselt_user_id'] = $uid;
-            $_SESSION['valselt_username'] = $username; // Opsional
+            $_SESSION['valselt_username'] = $username; 
             
-            logActivity($conn, $uid, "Login GitHub (Linked by Email Match)");
+            logActivity($conn, $uid, "Login Berhasil menggunakan GitHub (Linked by Email Match) di perangkat  $deviceInfo");
             logUserDevice($conn, $uid);
             
             header("Location: index.php");
@@ -167,7 +169,7 @@ else {
                 $_SESSION['valselt_user_id'] = $new_id;
                 $_SESSION['valselt_username'] = $username;
                 
-                logActivity($conn, $new_id, "Register via GitHub");
+                logActivity($conn, $new_id, "Register Berhasil menggunakan GitHub di perangkat $deviceInfo");
                 logUserDevice($conn, $new_id);
                 
                 header("Location: index.php");

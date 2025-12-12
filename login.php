@@ -196,7 +196,7 @@ function processSSORedirect($conn, $uid, $target) {
                         <hr style="margin-top:-10px; border:0; border-top:1px solid #e5e7eb;">
                     </div>
 
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 20px;">
+                    <div style="display: flex; flex-direction: column; gap: 10px;">
                         <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn-google">
                             <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style="width:20px; margin-right:10px;">
                             Sign in with Google

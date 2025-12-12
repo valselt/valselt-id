@@ -638,7 +638,6 @@ a:hover { color: var(--primary); }
     font-weight: 500;
     font-family: var(--font-sans);
     transition: 0.2s;
-    margin-bottom: 20px;
 }
 .btn-google:hover {
     background: #f9fafb;
@@ -659,7 +658,6 @@ a:hover { color: var(--primary); }
     font-weight: 500;
     font-family: var(--font-sans);
     transition: 0.2s;
-    margin-bottom: 20px;
 }
 
 .btn-social:hover {
