@@ -302,4 +302,11 @@ function logUserDevice($conn, $uid) {
         $conn->query("INSERT INTO user_devices (user_id, device_name, ip_address, session_id, last_login) VALUES ('$uid', '$device', '$ip', '$sess_id', NOW())");
     }
 }
+
+function logActivity($conn, $uid, $action) {
+    if (!$uid) return;
+    $action = $conn->real_escape_string($action);
+    // Pastikan koneksi DB ($conn) valid
+    $conn->query("INSERT INTO logsuser (id_user, behaviour) VALUES ('$uid', '$action')");
+}
 ?>
