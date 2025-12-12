@@ -816,8 +816,7 @@ if (isset($_POST['send_logs_email'])) {
             
             reader.onload = function(e) {
                 imageToCrop.src = e.target.result;
-                cropModal.style.display = 'flex';
-                setTimeout(() => cropModal.style.opacity = '1', 10);
+                openModal('cropModal');
 
                 if(cropper) cropper.destroy();
                 cropper = new Cropper(imageToCrop, {
