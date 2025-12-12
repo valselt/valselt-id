@@ -112,13 +112,21 @@ if (isset($_POST['ajax_action'])) {
 // --- LOGIC SIMPAN PASSWORD BARU (POST BIASA) ---
 if (isset($_POST['save_new_password'])) {
     $new_pass = $_POST['new_password'];
-    if (strlen($new_pass) < 6) {
+    
+    // Validasi Standar Register (Length, Upper, Number, Symbol)
+    $uppercase = preg_match('@[A-Z]@', $new_pass);
+    $number    = preg_match('@[0-9]@', $new_pass);
+    $symbol    = preg_match('@[^\w]@', $new_pass);
+
+    if (strlen($new_pass) < 6 || !$uppercase || !$number || !$symbol) {
         $_SESSION['popup_status'] = 'error';
-        $_SESSION['popup_message'] = 'Password minimal 6 karakter!';
+        $_SESSION['popup_message'] = 'Password lemah! Harus 6+ karakter, ada Huruf Besar, Angka, dan Simbol.';
     } else {
         $hash = password_hash($new_pass, PASSWORD_DEFAULT);
         $conn->query("UPDATE users SET password='$hash' WHERE id='$user_id'");
-        logActivity($conn, $user_id, "Password diubah");
+        
+        logActivity($conn, $user_id, "Berhasil mengganti password baru");
+
         $_SESSION['popup_status'] = 'success';
         $_SESSION['popup_message'] = 'Password berhasil diganti!';
     }
@@ -494,8 +502,17 @@ $user_data = $u_res->fetch_assoc();
         <p class="popup-message">Silakan buat password baru Anda.</p>
         
         <form method="POST">
-            <input type="password" name="new_password" class="form-control" placeholder="Password Baru (Min. 6 Karakter)" required style="margin-bottom:15px; text-align:center;">
-            <button type="submit" name="save_new_password" class="popup-btn success">Simpan Password</button>
+            <input type="password" id="new_password_input" name="new_password" class="form-control" placeholder="Password Baru" required style="margin-bottom:10px; text-align:center;">
+            
+            <div class="password-requirements" id="pwd-req-box-modal" style="text-align:left; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; margin-bottom:15px; font-size:0.85rem;">
+
+                <div class="req-item" id="req-len" style="color:#6b7280; margin-bottom:2px;"><i class='bx bx-check'></i> 6+ Karakter</div>
+                <div class="req-item" id="req-upper" style="color:#6b7280; margin-bottom:2px;"><i class='bx bx-check'></i> Huruf Besar (A-Z)</div>
+                <div class="req-item" id="req-num" style="color:#6b7280; margin-bottom:2px;"><i class='bx bx-check'></i> Angka (0-9)</div>
+                <div class="req-item" id="req-sym" style="color:#6b7280;"><i class='bx bx-check'></i> Simbol (!@#$)</div>
+            </div>
+
+            <button type="submit" id="btnSavePass" name="save_new_password" class="popup-btn success" disabled style="opacity:0.6; cursor:not-allowed;">Simpan Password</button>
         </form>
         <button onclick="closeModal('modalNewPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
     </div>
@@ -757,6 +774,73 @@ $user_data = $u_res->fetch_assoc();
             }
         });
     }
+
+    // --- LOGIC VALIDASI PASSWORD INTERAKTIF ---
+    // --- FINAL PASSWORD VALIDATION SCRIPT (MATCH REGISTER.PHP) ---
+
+    const newPassInput = document.getElementById('new_password_input');
+    const reqBoxModal  = document.getElementById('pwd-req-box-modal');
+    const btnSavePass  = document.getElementById('btnSavePass');
+
+    // Event listeners
+    newPassInput.addEventListener('focus', function() { checkPwd(this.value); });
+    newPassInput.addEventListener('keyup', function() { checkPwd(this.value); });
+
+    // Jangan pakai display:none — cukup remove class show
+    newPassInput.addEventListener('blur', function() { 
+        reqBoxModal.classList.remove("show");
+    });
+
+    // Password checker
+    function checkPwd(val) {
+
+        const isLen   = val.length >= 6;
+        const isUpper = /[A-Z]/.test(val);
+        const isNum   = /[0-9]/.test(val);
+        const isSym   = /[^\w]/.test(val);
+
+        updateReqUI("req-len", isLen);
+        updateReqUI("req-upper", isUpper);
+        updateReqUI("req-num", isNum);
+        updateReqUI("req-sym", isSym);
+
+        const isValid = isLen && isUpper && isNum && isSym;
+
+        // Enable / Disable Save button
+        if (isValid) {
+            btnSavePass.disabled = false;
+            btnSavePass.style.opacity = "1";
+            btnSavePass.style.cursor = "pointer";
+        } else {
+            btnSavePass.disabled = true;
+            btnSavePass.style.opacity = "0.6";
+            btnSavePass.style.cursor = "not-allowed";
+        }
+
+        // SHOW / HIDE box (match register.php behaviour)
+        if (val.length === 0 || isValid) {
+            reqBoxModal.classList.remove("show");
+        } else {
+            reqBoxModal.classList.add("show");
+        }
+    }
+
+    // Update requirement UI
+    function updateReqUI(id, isValid) {
+        const el   = document.getElementById(id);
+        const icon = el.querySelector("i");
+
+        if (isValid) {
+            el.classList.add("valid");
+            el.classList.remove("invalid");
+            icon.className = "bx bx-check-circle";
+        } else {
+            el.classList.remove("valid");
+            el.classList.add("invalid");
+            icon.className = "bx bx-circle";
+        }
+    }
+
 </script>
 
 <?php include 'popupcustom.php'; ?>

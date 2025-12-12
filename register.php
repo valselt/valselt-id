@@ -49,6 +49,10 @@ if (isset($_POST['register'])) {
              $stmt->bind_param("sssss", $username, $email, $password_hash, $otp, $expiry);
              
              if ($stmt->execute()) {
+                $new_user_id = $conn->insert_id;
+                 $deviceInfo = getDeviceName(); 
+                 logActivity($conn, $new_user_id, "Pendaftaran Akun Baru Berhasil (Manual) di perangkat $deviceInfo");
+                 logUserDevice($conn, $new_user_id);
                  if(sendOTPEmail($email, $otp)) {
                       $_SESSION['verify_email'] = $email;
                       $_SESSION['popup_status'] = 'success';
