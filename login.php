@@ -46,6 +46,8 @@ if (isset($_POST['login'])) {
                 $_SESSION['valselt_username'] = $row['username'];
                 // [TAMBAHAN BARU] CATAT DEVICE
                 logUserDevice($conn, $row['id']); 
+                $deviceInfo = getDeviceName(); // Ambil nama device
+                logActivity($conn, $row['id'], "Login Berhasil menggunakan Metode Manual (Username/Email) di perangkat $deviceInfo");
                 // ----------------------------
                 // --- TAMBAHAN LOGIKA REMEMBER ME ---
                 if (isset($_POST['remember_me'])) {
@@ -74,6 +76,10 @@ if (isset($_POST['login'])) {
 
 function processSSORedirect($conn, $uid, $target) {
     if (!empty($target)) {
+        $parsed_url = parse_url($target);
+        $app_name = isset($parsed_url['host']) ? $parsed_url['host'] : $target;
+        
+        logActivity($conn, $uid, "Akun digunakan untuk Akses Aplikasi Pihak Ketiga: " . $app_name);
         $token = bin2hex(random_bytes(32));
         $conn->query("UPDATE users SET auth_token='$token' WHERE id='$uid'");
         header("Location: " . $target . "?token=" . $token);

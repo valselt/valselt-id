@@ -28,6 +28,7 @@ if (isset($_GET['code'])) {
             $stmt->bind_param("si", $g_id, $uid);
             
             if ($stmt->execute()) {
+                logActivity($conn, $uid, "Akun Google Ditautkan di Perangkat " . getDeviceName());
                 $_SESSION['popup_status'] = 'success';
                 $_SESSION['popup_message'] = 'Akun Google berhasil ditautkan!';
             } else {
@@ -84,6 +85,11 @@ if (isset($_GET['code'])) {
                     // Login user baru
                     $_SESSION['valselt_user_id'] = $new_uid;
                     $_SESSION['valselt_username'] = $new_username;
+
+                    // Opsi jika ingin dipisah (Menghasilkan 2 baris log di database)
+                    logActivity($conn, $new_uid, "Pendaftaran Akun Baru via Google Berhasil");
+                    logActivity($conn, $new_uid, "Login Berhasil menggunakan Google di perangkat " . getDeviceName());
+                    logUserDevice($conn, $new_uid);
                     
                     processSSORedirect($conn, $new_uid, $redirect_to);
                 } else {
@@ -104,12 +110,17 @@ if (isset($_GET['code'])) {
 function loginUser($user, $redirect_to, $conn) {
     $_SESSION['valselt_user_id'] = $user['id'];
     $_SESSION['valselt_username'] = $user['username'];
+    logActivity($conn, $user['id'], "Login Berhasil menggunakan Google di perangkat " . getDeviceName());
+    logUserDevice($conn, $user['id']); // Catat Device ke tabel user_devices
     processSSORedirect($conn, $user['id'], $redirect_to);
 }
 
 // Helper Function SSO (Sama dengan di login.php)
 function processSSORedirect($conn, $uid, $target) {
     if (!empty($target)) {
+        $parsed_url = parse_url($target);
+        $app_name = isset($parsed_url['host']) ? $parsed_url['host'] : $target;
+        logActivity($conn, $uid, "Akun digunakan untuk Akses Aplikasi Pihak Ketiga: " . $app_name);
         $token = bin2hex(random_bytes(32));
         $conn->query("UPDATE users SET auth_token='$token' WHERE id='$uid'");
         header("Location: " . $target . "?token=" . $token);

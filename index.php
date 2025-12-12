@@ -7,12 +7,6 @@ if (!isset($_SESSION['valselt_user_id'])) {
 
 $user_id = $_SESSION['valselt_user_id'];
 
-// --- FUNGSI BANTUAN LOGGING ---
-function logActivity($conn, $uid, $action) {
-    $action = $conn->real_escape_string($action);
-    $conn->query("INSERT INTO logsuser (id_user, behaviour) VALUES ('$uid', '$action')");
-}
-
 // --- AJAX HANDLER UNTUK GANTI PASSWORD ---
 if (isset($_POST['ajax_action'])) {
     header('Content-Type: application/json');
@@ -323,7 +317,7 @@ $user_data = $u_res->fetch_assoc();
 
         <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
             <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
-                <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> Active Devices
+                <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> Devices
             </h4>
 
             <?php
