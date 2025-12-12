@@ -698,6 +698,55 @@ a:hover { color: var(--primary); }
     box-shadow: 0 0 0 3px rgba(245,158,11,0.15);
 }
 
+.accordion-main {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+
+
+.accordion-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px 20px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-weight: 600;
+}
+.accordion-header i.indicator {
+    transition: transform 0.3s;
+}
+.accordion-header.open i.indicator {
+    transform: rotate(90deg);
+}
+
+.accordion-content {
+    max-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+    transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+}
+.accordion-content.open {
+    max-height: 2000px; /* Nilai besar agar konten terlihat */
+    padding-top: 15px; /* Memberi jarak dari header */
+    padding-bottom: 5px;
+}
+
+.accordion-content-inside{
+    background: white; 
+    border: 1px solid #e5e7eb; 
+    padding: 20px; 
+    border-radius: 8px; 
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+}
+
 
 @media (max-width: 480px) {
   .profile-card { 

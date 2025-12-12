@@ -343,186 +343,162 @@ if (isset($_POST['send_logs_email'])) {
             </div>
         </form>
 
-        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-            <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
-                <i class='bx bx-user' style="margin-right:10px; font-size:1.2rem;"></i>Linked Accounts
-            </h4>
+        <div class="accordion-main">
+            <div id="accordionContainer" class="accordionContainer">
             
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <div style="display:flex; align-items:center;">
-                    <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width:24px; margin-right:12px;">
-                    <div>
-                        <div style="font-weight:500;">Google</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted);">
+                <div class="accordion-header" id="acc1-header" onclick="toggleAccordion('acc1-header')">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class='bx bx-user-circle' style="font-size:1.5rem; color:var(--text-main);"></i>
+                        Account & Devices
+                    </div>
+                    <i class='bx bx-chevron-right indicator'></i>
+                </div>
+
+                <div class="accordion-content" id="acc1-content">
+                    
+                    <div class="accordion-content-inside">
+                        <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
+                            <i class='bx bx-link' style="margin-right:10px; font-size:1.2rem;"></i>Linked Accounts
+                        </h4>
+                        
+                        <div style="display:flex; justify-content:space-between; align-items:center;">
+                            <div style="display:flex; align-items:center;">
+                                <img src="https://www.svgrepo.com/show/475656/google-color.svg" style="width:24px; margin-right:12px;">
+                                <div>
+                                    <div style="font-weight:500;">Google</div>
+                                    <div style="font-size:0.85rem; color:var(--text-muted);">
+                                        <?php if($user_data['google_id']): ?> Terhubung <?php else: ?> Tidak terhubung <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
                             <?php if($user_data['google_id']): ?>
-                                Terhubung
+                                <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;"><i class='bx bx-check'></i> Linked</button>
                             <?php else: ?>
-                                Tidak terhubung
+                                <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">Link Account</a>
                             <?php endif; ?>
                         </div>
-                    </div>
-                </div>
 
-                <?php if($user_data['google_id']): ?>
-                    <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;">
-                        <i class='bx bx-check'></i> Linked
-                    </button>
-                <?php else: ?>
-                    <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">
-                        Link Account
-                    </a>
-                <?php endif; ?>
-            </div>
-
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
-                <div style="display:flex; align-items:center;">
-                    <i class='bx bxl-github' style="font-size:28px; margin-right:12px; color:#333;"></i>
-                    <div>
-                        <div style="font-weight:500;">GitHub</div>
-                        <div style="font-size:0.85rem; color:var(--text-muted);">
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-top:15px;">
+                            <div style="display:flex; align-items:center;">
+                                <i class='bx bxl-github' style="font-size:28px; margin-right:12px; color:#333;"></i>
+                                <div>
+                                    <div style="font-weight:500;">GitHub</div>
+                                    <div style="font-size:0.85rem; color:var(--text-muted);">
+                                        <?php if($user_data['github_id']): ?> Terhubung <?php else: ?> Tidak terhubung <?php endif; ?>
+                                    </div>
+                                </div>
+                            </div>
                             <?php if($user_data['github_id']): ?>
-                                Terhubung
+                                <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;"><i class='bx bx-check'></i> Linked</button>
                             <?php else: ?>
-                                Tidak terhubung
+                                <?php $github_link_url = "https://github.com/login/oauth/authorize?client_id=" . $github_client_id . "&scope=user:email"; ?>
+                                <a href="<?php echo $github_link_url; ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">Link Account</a>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="accordion-content-inside">
+                        <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
+                            <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> Devices
+                        </h4>
+
+                        <?php
+                        $current_session = session_id();
+                        $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY (session_id = '$current_session') DESC, last_login DESC");
+                        
+                        if ($q_dev->num_rows > 0):
+                            while($dev = $q_dev->fetch_assoc()):
+                                $is_current = ($dev['session_id'] == $current_session);
+                                $icon = 'bx-laptop'; 
+                                if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) { $icon = 'bx-mobile'; }
+                        ?>
+                        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
+                            <div style="display:flex; align-items:center;">
+                                <div style="width:40px; height:40px; background:#f3f4f6; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:var(--primary);">
+                                    <i class='bx <?php echo $icon; ?>' style="font-size:1.2rem;"></i>
+                                </div>
+                                <div>
+                                    <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display: flex; align-items: center;">
+                                        <?php echo htmlspecialchars($dev['device_name']); ?>
+                                        <?php if($is_current): ?>
+                                            <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px; border: 1px solid #bbf7d0;">This Device</span>
+                                        <?php endif; ?>
+                                    </div>
+                                    <div style="font-size:0.8rem; color:var(--text-muted);">
+                                        <?php echo date('d M Y, H:i', strtotime($dev['last_login'])); ?> • IP: <?php echo htmlspecialchars($dev['ip_address']); ?>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        <?php endwhile; else: ?>
+                            <p style="color:var(--text-muted); font-size:0.9rem; text-align:center;">Belum ada data perangkat tersimpan.</p>
+                        <?php endif; ?>
+                    </div>
+                    
+                </div>
+            </div>
+            
+            <div id="accordionContainer" class="accordionContainer">
+                <div class="accordion-header" id="acc2-header" onclick="toggleAccordion('acc2-header')">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class='bx bx-lock-alt' style="font-size:1.5rem; color:var(--text-main);"></i>
+                        Security
+                    </div>
+                    <i class='bx bx-chevron-right indicator'></i>
+                </div>
+                
+                <div class="accordion-content" id="acc2-content">
+                    
+                    <div class="accordion-content-inside">
+                        <div style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center; justify-content:space-between;" class="passkey-title">
+                            <div class="passkey-header" style="display:flex; flex-direction:row; align-items:center;">
+                                <i class='bx bx-fingerprint' style="margin-right:10px; font-size:1.2rem;"></i>
+                                <h4>Passkey</h4>
+                            </div>
+                            <button onclick="registerPasskey()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#000; color:white;">
+                                <i class='bx bx-plus'></i>
+                            </button>
+                        </div>
+
+                        <div class="passkey-list">
+                            <?php
+                            $q_pk = $conn->query("SELECT * FROM user_passkeys WHERE user_id='$user_id' ORDER BY created_at DESC");
+                            
+                            if ($q_pk->num_rows > 0):
+                                while($pk = $q_pk->fetch_assoc()):
+                                    $pk_date = date('d M Y, H:i', strtotime($pk['created_at']));
+                                    $source = $pk['credential_source'] ? htmlspecialchars($pk['credential_source']) : 'Passkey Credential';
+                                    
+                                    $iconClass = 'bx-key'; $bgColor = '#e0f2fe'; $iconColor = '#0284c7';
+                                    if (stripos($source, 'Google') !== false || stripos($source, 'Android') !== false) { $iconClass = 'bxl-google'; $bgColor = '#dcfce7'; $iconColor = '#166534'; } 
+                                    elseif (stripos($source, 'iCloud') !== false || stripos($source, 'Apple') !== false) { $iconClass = 'bxl-apple'; $bgColor = '#f3f4f6'; $iconColor = '#1f2937'; } 
+                                    elseif (stripos($source, 'Windows') !== false) { $iconClass = 'bxl-windows'; $bgColor = '#dbeafe'; $iconColor = '#2563eb'; }
+                            ?>
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
+                                <div style="display:flex; align-items:center;">
+                                    <div style="width:40px; height:40px; background:<?php echo $bgColor; ?>; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:<?php echo $iconColor; ?>;">
+                                        <i class='bx <?php echo $iconClass; ?>' style="font-size:1.4rem;"></i>
+                                    </div>
+                                    <div>
+                                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);"><?php echo $source; ?></div>
+                                        <div style="font-size:0.8rem; color:var(--text-muted);">Dibuat: <?php echo $pk_date; ?></div>
+                                    </div>
+                                </div>
+                                <button type="button" onclick="openDeletePasskey('<?php echo $pk['id']; ?>')" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Passkey">
+                                    <i class='bx bx-trash' style="font-size:1.2rem;"></i>
+                                </button>
+                            </div>
+                            <?php 
+                                endwhile; 
+                            else: 
+                            ?>
+                                <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
+                                    Belum ada Passkey Tersimpan. Klik "+" untuk menambahkannya.
+                                </div>
                             <?php endif; ?>
                         </div>
                     </div>
                 </div>
-
-                <?php if($user_data['github_id']): ?>
-                    <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;">
-                        <i class='bx bx-check'></i> Linked
-                    </button>
-                <?php else: ?>
-                    <?php 
-                    $github_link_url = "https://github.com/login/oauth/authorize?client_id=" . $github_client_id . "&scope=user:email"; 
-                    ?>
-                    <a href="<?php echo $github_link_url; ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">
-                        Link Account
-                    </a>
-                <?php endif; ?>
-            </div>
-        </div>
-
-        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-            <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
-                <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> Devices
-            </h4>
-
-            <?php
-            $current_session = session_id();
-            $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY (session_id = '$current_session') DESC, last_login DESC");
-            
-            if ($q_dev->num_rows > 0):
-                while($dev = $q_dev->fetch_assoc()):
-                    $is_current = ($dev['session_id'] == $current_session);
-                    
-                    // Tentukan Icon
-                    $icon = 'bx-laptop'; 
-                    if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) {
-                        $icon = 'bx-mobile';
-                    }
-            ?>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
-                <div style="display:flex; align-items:center;">
-                    <div style="width:40px; height:40px; background:#f3f4f6; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:var(--primary);">
-                        <i class='bx <?php echo $icon; ?>' style="font-size:1.2rem;"></i>
-                    </div>
-                    
-                    <div>
-                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display: flex; align-items: center;">
-                            <?php echo htmlspecialchars($dev['device_name']); ?>
-                            
-                            <?php if($is_current): ?>
-                                <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px; border: 1px solid #bbf7d0;">
-                                    This Device
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">
-                            <?php echo date('d M Y, H:i', strtotime($dev['last_login'])); ?> • IP: <?php echo htmlspecialchars($dev['ip_address']); ?>
-                        </div>
-                    </div>
-                </div>
-                
-                <?php if(!$is_current): ?>
-                    <?php endif; ?>
-            </div>
-
-            <?php endwhile; else: ?>
-                <p style="color:var(--text-muted); font-size:0.9rem; text-align:center;">Belum ada data perangkat tersimpan. Silakan Logout dan Login kembali.</p>
-            <?php endif; ?>
-        </div>
-
-        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-            <div style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center; justify-content:space-between;" class="passkey-title">
-                <div class="passkey-header" style="display:flex; flex-direction:row; align-items:center;">
-                    <i class='bx bx-shield' style="margin-right:10px; font-size:1.2rem;"></i><h4>Passkey</h4>
-                </div>
-
-                <button onclick="registerPasskey()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#000; color:white;">
-                    <i class='bx bx-plus'></i>
-                </button>
-            </div>
-
-            <div class="passkey-list">
-                <?php
-                // AMBIL DATA PASSKEY
-                $q_pk = $conn->query("SELECT * FROM user_passkeys WHERE user_id='$user_id' ORDER BY created_at DESC");
-                
-                if ($q_pk->num_rows > 0):
-                    while($pk = $q_pk->fetch_assoc()):
-                        $pk_date = date('d M Y, H:i', strtotime($pk['created_at']));
-                        $source = $pk['credential_source'] ? htmlspecialchars($pk['credential_source']) : 'Passkey Credential';
-                        
-                        // Tentukan Icon & Warna Berdasarkan Nama
-                        $iconClass = 'bx-key';
-                        $bgColor = '#e0f2fe'; // Default Biru
-                        $iconColor = '#0284c7';
-
-                        if (stripos($source, 'Google') !== false || stripos($source, 'Android') !== false) {
-                            $iconClass = 'bxl-google';
-                            $bgColor = '#dcfce7'; // Hijau
-                            $iconColor = '#166534';
-                        } elseif (stripos($source, 'iCloud') !== false || stripos($source, 'Apple') !== false) {
-                            $iconClass = 'bxl-apple';
-                            $bgColor = '#f3f4f6'; // Abu
-                            $iconColor = '#1f2937';
-                        } elseif (stripos($source, 'Windows') !== false) {
-                            $iconClass = 'bxl-windows';
-                            $bgColor = '#dbeafe'; // Biru Win
-                            $iconColor = '#2563eb';
-                        }
-                ?>
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
-                        <div style="display:flex; align-items:center;">
-                            <div style="width:40px; height:40px; background:<?php echo $bgColor; ?>; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:<?php echo $iconColor; ?>;">
-                                <i class='bx <?php echo $iconClass; ?>' style="font-size:1.4rem;"></i>
-                            </div>
-                            
-                            <div>
-                                <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);">
-                                    <?php echo $source; ?>
-                                </div>
-                                <div style="font-size:0.8rem; color:var(--text-muted);">
-                                    Dibuat: <?php echo $pk_date; ?>
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <button type="button" onclick="openDeletePasskey('<?php echo $pk['id']; ?>')" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Passkey">
-                            <i class='bx bx-trash' style="font-size:1.2rem;"></i>
-                        </button>
-                    </div>
-                <?php 
-                    endwhile; 
-                else: 
-                ?>
-                    <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
-                        Belum ada Passkey Tersimpan. Klik "+" untuk menambahkannya.
-                    </div>
-                <?php endif; ?>
             </div>
         </div>
 
@@ -1195,6 +1171,24 @@ if (isset($_POST['send_logs_email'])) {
         // Catatan: Karena PHP melakukan redirect (header("Location:...")), 
         // kita tidak perlu logika 'success' di JS. Halaman akan reload
         // dan menampilkan popup status (success/error) dari PHP.
+    }
+
+    // --- FUNGSI ACCORDION BARU ---
+    function toggleAccordion(headerId) {
+        const header = document.getElementById(headerId);
+        const contentId = headerId.replace('header', 'content');
+        const content = document.getElementById(contentId);
+        const icon = header.querySelector('.indicator');
+
+        if (content.classList.contains('open')) {
+            // Tutup
+            content.classList.remove('open');
+            header.classList.remove('open');
+        } else {
+            // Buka
+            content.classList.add('open');
+            header.classList.add('open');
+        }
     }
 
 </script>
