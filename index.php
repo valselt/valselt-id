@@ -840,7 +840,7 @@ if (isset($_POST['send_logs_email'])) {
         if(placeholder) placeholder.style.display = 'none';
 
         document.getElementById('cropped_image_data').value = base64Image;
-        closeCropModal();
+        closeModal('cropModal')
 
         // 1. Ambil elemen form
         const form = document.getElementById('profileForm');
@@ -855,14 +855,6 @@ if (isset($_POST['send_logs_email'])) {
 
         // 3. Kirim form secara otomatis ke server
         form.submit();
-    }
-
-    function closeCropModal() {
-        cropModal.style.opacity = '0';
-        setTimeout(() => {
-            cropModal.style.display = 'none';
-            if(cropper) cropper.destroy();
-        }, 300);
     }
 
     // --- (PERUBAHAN 3: JS DELETE MODAL) ---
