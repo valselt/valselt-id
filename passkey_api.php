@@ -102,7 +102,7 @@ try {
             $userName, 
             60*4, 
             false, 
-            false, 
+            true, 
             $existingIds
         );
 

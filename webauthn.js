@@ -19,7 +19,7 @@ function base64urlToBuffer(base64) {
 
 let tempAttestation = null;
 
-// --- FUNGSI REGISTER PASSKEY ---
+// --- FUNGSI REGISTER PASSKEY (DIPERBAIKI UNTUK ANDROID) ---
 async function registerPasskey() {
     try {
         // 1. Minta Challenge
@@ -31,6 +31,15 @@ async function registerPasskey() {
         // Konversi format
         args.publicKey.user.id = base64urlToBuffer(args.publicKey.user.id);
         args.publicKey.challenge = base64urlToBuffer(args.publicKey.challenge);
+        
+        // ✅ PERBAIKAN: Tambahkan authenticatorSelection untuk Android
+        args.publicKey.authenticatorSelection = {
+            authenticatorAttachment: 'platform', // Prioritaskan device authenticator
+            requireResidentKey: false,
+            residentKey: 'preferred', // Gunakan resident key jika tersedia
+            userVerification: 'preferred' // Fingerprint/Face unlock
+        };
+
         if (args.publicKey.excludeCredentials) {
             for (let i = 0; i < args.publicKey.excludeCredentials.length; i++) {
                 args.publicKey.excludeCredentials[i].id = base64urlToBuffer(args.publicKey.excludeCredentials[i].id);
@@ -52,8 +61,6 @@ async function registerPasskey() {
         setTimeout(() => document.getElementById('passkey_name_input').focus(), 100);
 
     } catch (e) {
-        // GANTI ALERT DENGAN POPUP CUSTOM
-        // Filter error jika user menekan tombol "Cancel" di browser agar tidak muncul popup error
         if (e.name !== 'NotAllowedError') {
              showError("Gagal membuat Passkey: " + e.message);
         }
@@ -83,26 +90,28 @@ async function submitPasskeyData() {
             closeModal('modalPasskeyName');
             window.location.reload(); 
         } else {
-            // GANTI ALERT
             showError("Gagal: " + verifyResult.message);
             btn.innerText = "Simpan";
             btn.disabled = false;
         }
     } catch (e) {
-        // GANTI ALERT
         showError("Error Server: " + e.message);
         btn.innerText = "Simpan";
         btn.disabled = false;
     }
 }
 
-// --- FUNGSI LOGIN PASSKEY ---
+// --- FUNGSI LOGIN PASSKEY (DIPERBAIKI UNTUK ANDROID) ---
 async function loginPasskey() {
     try {
         const rep = await fetch('passkey_api.php?fn=getLoginArgs');
         const args = await rep.json();
 
         args.publicKey.challenge = base64urlToBuffer(args.publicKey.challenge);
+        
+        // ✅ PERBAIKAN: Tambahkan userVerification untuk Android
+        args.publicKey.userVerification = 'preferred';
+        
         if (args.publicKey.allowCredentials) {
             for (let i = 0; i < args.publicKey.allowCredentials.length; i++) {
                 args.publicKey.allowCredentials[i].id = base64urlToBuffer(args.publicKey.allowCredentials[i].id);
@@ -129,13 +138,10 @@ async function loginPasskey() {
         if (verifyResult.status === 'success') {
             window.location.href = "index.php"; 
         } else {
-            // GANTI ALERT
             showError("Login Gagal: " + verifyResult.message);
         }
 
     } catch (e) {
-        // GANTI ALERT
-        // Jika user cancel login, biasanya tidak perlu popup, tapi jika ingin tetap muncul:
         if (e.name !== 'NotAllowedError') {
             showError("Gagal Login Passkey: " + e.message);
         }

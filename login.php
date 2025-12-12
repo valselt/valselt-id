@@ -69,7 +69,7 @@ if (isset($_POST['login'])) {
                 processSSORedirect($conn, $row['id'], $redirect_to);
             }
         } else {
-            $_SESSION['popup_status'] = 'error'; $_SESSION['popup_message'] = 'Password salah!';
+            $_SESSION['popup_status'] = 'error'; $_SESSION['popup_message'] = 'Username/Email atau Password salah!';
         }
     } else {
         $_SESSION['popup_status'] = 'error'; $_SESSION['popup_message'] = 'Akun tidak ditemukan!';
