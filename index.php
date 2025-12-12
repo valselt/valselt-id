@@ -328,13 +328,14 @@ $user_data = $u_res->fetch_assoc();
 
             <?php
             $current_session = session_id();
-            $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY last_login DESC");
+            $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY (session_id = '$current_session') DESC, last_login DESC");
             
             if ($q_dev->num_rows > 0):
                 while($dev = $q_dev->fetch_assoc()):
                     $is_current = ($dev['session_id'] == $current_session);
-                    // Tentukan Icon berdasarkan nama device
-                    $icon = 'bx-laptop'; // Default
+                    
+                    // Tentukan Icon
+                    $icon = 'bx-laptop'; 
                     if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) {
                         $icon = 'bx-mobile';
                     }
@@ -345,11 +346,15 @@ $user_data = $u_res->fetch_assoc();
                     <div style="width:40px; height:40px; background:#f3f4f6; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:var(--primary);">
                         <i class='bx <?php echo $icon; ?>' style="font-size:1.2rem;"></i>
                     </div>
+                    
                     <div>
-                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);">
+                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display: flex; align-items: center;">
                             <?php echo htmlspecialchars($dev['device_name']); ?>
+                            
                             <?php if($is_current): ?>
-                                <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px;">This Device</span>
+                                <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px; border: 1px solid #bbf7d0;">
+                                    This Device
+                                </span>
                             <?php endif; ?>
                         </div>
                         <div style="font-size:0.8rem; color:var(--text-muted);">

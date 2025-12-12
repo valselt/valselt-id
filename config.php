@@ -1,5 +1,4 @@
 <?php
-
 session_start();
 date_default_timezone_set('Asia/Jakarta');
 
@@ -58,7 +57,6 @@ try {
         'credentials' => ['key' => $minio_key, 'secret' => $minio_secret],
     ]);
 } catch (Exception $e) { die("Gagal MinIO: " . $e->getMessage()); }
-
 
 $google_client = new GoogleClient();
 $google_client->setClientId('627951571756-lrp1sdd41nbbi6sf0snvkcs4e6v8c43g.apps.googleusercontent.com');
@@ -246,21 +244,44 @@ function getDeviceName() {
     $os = "Unknown OS";
     $browser = "Unknown Browser";
 
-    // Deteksi OS
-    if (preg_match('/windows nt 10/i', $userAgent))     $os = 'Windows 10/11';
-    elseif (preg_match('/windows nt 6.3/i', $userAgent)) $os = 'Windows 8.1';
+    // --- DETEKSI OS & MODEL ---
+    
+    if (preg_match('/windows nt 10/i', $userAgent))       $os = 'Windows 10/11';
+    elseif (preg_match('/windows nt 6.3/i', $userAgent))   $os = 'Windows 8.1';
     elseif (preg_match('/macintosh|mac os x/i', $userAgent)) $os = 'Mac OS';
-    elseif (preg_match('/linux/i', $userAgent))         $os = 'Linux';
-    elseif (preg_match('/android/i', $userAgent))       $os = 'Android';
-    elseif (preg_match('/iphone/i', $userAgent))        $os = 'iPhone';
-    elseif (preg_match('/ipad/i', $userAgent))          $os = 'iPad';
+    
+    // DETEKSI ANDROID + MODEL
+    elseif (preg_match('/android/i', $userAgent)) {
+        $os = 'Android';
+        
+        // Coba ambil teks antara "Android ...;" dan "Build/"
+        // Contoh UA: ... Android 10; SAMSUNG SM-A505F Build/ ...
+        if (preg_match('/Android\s+([0-9.]+); ([a-zA-Z0-9\s\-\_]+) Build/i', $userAgent, $matches)) {
+            // $matches[2] biasanya berisi model HP (Misal: SAMSUNG SM-A505F)
+            $model = trim($matches[2]);
+            if (!empty($model)) {
+                $os = "Android ($model)";
+            }
+        } 
+        // Fallback: Coba ambil format lain jika format pertama gagal
+        elseif (preg_match('/Android\s+([0-9.]+); ([a-zA-Z0-9\s\-\_]+)\)/i', $userAgent, $matches)) {
+             $model = trim($matches[2]);
+             if (!empty($model)) {
+                $os = "Android ($model)";
+            }
+        }
+    }
+    
+    elseif (preg_match('/linux/i', $userAgent))           $os = 'Linux';
+    elseif (preg_match('/iphone/i', $userAgent))          $os = 'iPhone';
+    elseif (preg_match('/ipad/i', $userAgent))            $os = 'iPad';
 
-    // Deteksi Browser
+    // --- DETEKSI BROWSER ---
     if (preg_match('/MSIE/i', $userAgent) && !preg_match('/Opera/i', $userAgent)) $browser = 'Internet Explorer';
     elseif (preg_match('/Firefox/i', $userAgent)) $browser = 'Firefox';
-    elseif (preg_match('/Chrome/i', $userAgent)) $browser = 'Chrome';
-    elseif (preg_match('/Safari/i', $userAgent)) $browser = 'Safari';
-    elseif (preg_match('/Opera/i', $userAgent))  $browser = 'Opera';
+    elseif (preg_match('/Chrome/i', $userAgent))  $browser = 'Chrome';
+    elseif (preg_match('/Safari/i', $userAgent))  $browser = 'Safari';
+    elseif (preg_match('/Opera/i', $userAgent))   $browser = 'Opera';
 
     return "$os - $browser";
 }
@@ -281,3 +302,4 @@ function logUserDevice($conn, $uid) {
         $conn->query("INSERT INTO user_devices (user_id, device_name, ip_address, session_id, last_login) VALUES ('$uid', '$device', '$ip', '$sess_id', NOW())");
     }
 }
+?>
