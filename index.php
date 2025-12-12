@@ -409,8 +409,13 @@ if (isset($_POST['send_logs_email'])) {
                         if ($q_dev->num_rows > 0):
                             while($dev = $q_dev->fetch_assoc()):
                                 $is_current = ($dev['session_id'] == $current_session);
+                                
+                                // Icon Device
                                 $icon = 'bx-laptop'; 
                                 if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) { $icon = 'bx-mobile'; }
+                                
+                                // Format Lokasi (Jika kosong, tampilkan Unknown)
+                                $loc_display = !empty($dev['location']) ? htmlspecialchars($dev['location']) : 'Unknown Location';
                         ?>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
                             <div style="display:flex; align-items:center;">
@@ -424,7 +429,12 @@ if (isset($_POST['send_logs_email'])) {
                                             <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px; border: 1px solid #bbf7d0;">This Device</span>
                                         <?php endif; ?>
                                     </div>
-                                    <div style="font-size:0.8rem; color:var(--text-muted);">
+                                    
+                                    <div style="font-size:0.8rem; color:var(--text-muted); margin-top:2px;">
+                                        <i class='bx bx-map' style="font-size:0.8rem; margin-right:2px;"></i> <?php echo $loc_display; ?>
+                                    </div>
+                                    
+                                    <div style="font-size:0.75rem; color:#9ca3af; margin-top:2px;">
                                         <?php echo date('d M Y, H:i', strtotime($dev['last_login'])); ?> • IP: <?php echo htmlspecialchars($dev['ip_address']); ?>
                                     </div>
                                 </div>
