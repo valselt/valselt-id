@@ -215,6 +215,25 @@ if (isset($_POST['update_profile'])) {
     exit();
 }
 
+// --- LOGIC HAPUS PASSKEY (BARU) ---
+if (isset($_POST['delete_passkey'])) {
+    $pk_id = intval($_POST['pk_id']);
+    
+    // Pastikan passkey milik user yang sedang login
+    $stmt = $conn->prepare("DELETE FROM user_passkeys WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $pk_id, $user_id);
+    
+    if ($stmt->execute()) {
+        logActivity($conn, $user_id, "Menghapus Passkey");
+        $_SESSION['popup_status'] = 'success';
+        $_SESSION['popup_message'] = 'Passkey berhasil dihapus!';
+    } else {
+        $_SESSION['popup_status'] = 'error';
+        $_SESSION['popup_message'] = 'Gagal menghapus passkey.';
+    }
+    header("Location: index.php"); exit();
+}
+
 // --- HAPUS AKUN ---
 if (isset($_POST['delete_account'])) {
     // LOG SEBELUM MENGHAPUS
@@ -348,6 +367,61 @@ $user_data = $u_res->fetch_assoc();
                     <a href="<?php echo $github_link_url; ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">
                         Link Account
                     </a>
+                <?php endif; ?>
+            </div>
+        </div>
+
+        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+            <div style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center; justify-content:space-between;" class="passkey-title">
+                <div class="passkey-header" style="display:flex; flex-direction:row; align-items:center;">
+                    <i class='bx bx-shield' style="margin-right:10px; font-size:1.2rem;"></i><h4>Passkey</h4>
+                </div>
+
+                <button onclick="registerPasskey()" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#000; color:white;">
+                    <i class='bx bx-plus'></i> Buat Passkey
+                </button>
+            </div>
+
+            <div class="passkey-list">
+                <?php
+                // AMBIL DATA PASSKEY
+                $q_pk = $conn->query("SELECT * FROM user_passkeys WHERE user_id='$user_id' ORDER BY created_at DESC");
+                
+                if ($q_pk->num_rows > 0):
+                    while($pk = $q_pk->fetch_assoc()):
+                        // Format Tanggal
+                        $pk_date = date('d M Y, H:i', strtotime($pk['created_at']));
+                ?>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
+                        <div style="display:flex; align-items:center;">
+                            <div style="width:40px; height:40px; background:#e0f2fe; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:#0284c7;">
+                                <i class='bx bx-key' style="font-size:1.2rem;"></i>
+                            </div>
+                            
+                            <div>
+                                <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);">
+                                    Passkey Credential
+                                </div>
+                                <div style="font-size:0.8rem; color:var(--text-muted);">
+                                    Dibuat: <?php echo $pk_date; ?>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <form method="POST" onsubmit="return confirm('Hapus Passkey ini? Anda tidak bisa login menggunakan perangkat ini lagi.');">
+                            <input type="hidden" name="pk_id" value="<?php echo $pk['id']; ?>">
+                            <button type="submit" name="delete_passkey" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Passkey">
+                                <i class='bx bx-trash' style="font-size:1.2rem;"></i>
+                            </button>
+                        </form>
+                    </div>
+                <?php 
+                    endwhile; 
+                else: 
+                ?>
+                    <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
+                        Belum ada Passkey. Buat satu untuk login lebih cepat dengan Google Password Manager, FaceID, atau Windows Hello.
+                    </div>
                 <?php endif; ?>
             </div>
         </div>
@@ -548,6 +622,7 @@ $user_data = $u_res->fetch_assoc();
     </div>
 </div>
 
+<script src="passkey.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
     let cropper;

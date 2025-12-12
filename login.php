@@ -203,8 +203,13 @@ function processSSORedirect($conn, $uid, $target) {
                         </a>
 
                         <a href="<?php echo $github_auth_url; ?>" class="btn-social">
-                            <i class='bx bxl-github' style="font-size:1.4rem; color:#24292e; margin-right:10px;"></i>Sign in with GitHub
+                            <i class='bx bxl-github' style="font-size:1.4rem; color:#24292e; margin-right:10px;"></i>
+                            Sign in with GitHub
                         </a>
+                        <button type="button" onclick="loginPasskey()" class="btn-social" style="font-size:1rem;">
+                            <i class='bx bx-fingerprint' style="font-size:1.4rem; color:#24292e; margin-right:10px;"></i>
+                            Sign in with Passkey
+                        </button>
                     </div>
                     
                     <div class="auth-links">
@@ -215,6 +220,7 @@ function processSSORedirect($conn, $uid, $target) {
             </div>
         </div>
     </div>
+    <script src="passkey.js"></script>
     <script>
         // --- SCRIPT CAROUSEL LOGIC ---
         document.addEventListener("DOMContentLoaded", function() {

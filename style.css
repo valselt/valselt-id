@@ -665,3 +665,9 @@ a:hover { color: var(--primary); }
     border-color: #d1d5db;
     box-shadow: 0 2px 5px rgba(0,0,0,0.05);
 }
+
+@media (max-width: 480px) {
+  .profile-card { 
+        padding: 20px; 
+    }
+}
