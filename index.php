@@ -343,7 +343,7 @@ if (isset($_POST['send_logs_email'])) {
             </div>
         </form>
 
-        <div style="background: #f9fafb; padding: 20px; border-radius: 12px; margin-bottom: 30px; border: 1px solid #e5e7eb; margin-top:40px;">
+        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
             <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
                 <i class='bx bx-user' style="margin-right:10px; font-size:1.2rem;"></i>Linked Accounts
             </h4>
@@ -402,6 +402,57 @@ if (isset($_POST['send_logs_email'])) {
                     </a>
                 <?php endif; ?>
             </div>
+        </div>
+
+        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
+            <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
+                <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> Devices
+            </h4>
+
+            <?php
+            $current_session = session_id();
+            $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY (session_id = '$current_session') DESC, last_login DESC");
+            
+            if ($q_dev->num_rows > 0):
+                while($dev = $q_dev->fetch_assoc()):
+                    $is_current = ($dev['session_id'] == $current_session);
+                    
+                    // Tentukan Icon
+                    $icon = 'bx-laptop'; 
+                    if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) {
+                        $icon = 'bx-mobile';
+                    }
+            ?>
+            
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
+                <div style="display:flex; align-items:center;">
+                    <div style="width:40px; height:40px; background:#f3f4f6; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:var(--primary);">
+                        <i class='bx <?php echo $icon; ?>' style="font-size:1.2rem;"></i>
+                    </div>
+                    
+                    <div>
+                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display: flex; align-items: center;">
+                            <?php echo htmlspecialchars($dev['device_name']); ?>
+                            
+                            <?php if($is_current): ?>
+                                <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px; border: 1px solid #bbf7d0;">
+                                    This Device
+                                </span>
+                            <?php endif; ?>
+                        </div>
+                        <div style="font-size:0.8rem; color:var(--text-muted);">
+                            <?php echo date('d M Y, H:i', strtotime($dev['last_login'])); ?> • IP: <?php echo htmlspecialchars($dev['ip_address']); ?>
+                        </div>
+                    </div>
+                </div>
+                
+                <?php if(!$is_current): ?>
+                    <?php endif; ?>
+            </div>
+
+            <?php endwhile; else: ?>
+                <p style="color:var(--text-muted); font-size:0.9rem; text-align:center;">Belum ada data perangkat tersimpan. Silakan Logout dan Login kembali.</p>
+            <?php endif; ?>
         </div>
 
         <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
@@ -473,57 +524,6 @@ if (isset($_POST['send_logs_email'])) {
                     </div>
                 <?php endif; ?>
             </div>
-        </div>
-
-        <div style="background: white; border: 1px solid #e5e7eb; padding: 20px; border-radius: 12px; margin-top: 30px; box-shadow: 0 4px 10px rgba(0,0,0,0.02);">
-            <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
-                <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> Devices
-            </h4>
-
-            <?php
-            $current_session = session_id();
-            $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY (session_id = '$current_session') DESC, last_login DESC");
-            
-            if ($q_dev->num_rows > 0):
-                while($dev = $q_dev->fetch_assoc()):
-                    $is_current = ($dev['session_id'] == $current_session);
-                    
-                    // Tentukan Icon
-                    $icon = 'bx-laptop'; 
-                    if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) {
-                        $icon = 'bx-mobile';
-                    }
-            ?>
-            
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
-                <div style="display:flex; align-items:center;">
-                    <div style="width:40px; height:40px; background:#f3f4f6; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:var(--primary);">
-                        <i class='bx <?php echo $icon; ?>' style="font-size:1.2rem;"></i>
-                    </div>
-                    
-                    <div>
-                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display: flex; align-items: center;">
-                            <?php echo htmlspecialchars($dev['device_name']); ?>
-                            
-                            <?php if($is_current): ?>
-                                <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px; border: 1px solid #bbf7d0;">
-                                    This Device
-                                </span>
-                            <?php endif; ?>
-                        </div>
-                        <div style="font-size:0.8rem; color:var(--text-muted);">
-                            <?php echo date('d M Y, H:i', strtotime($dev['last_login'])); ?> • IP: <?php echo htmlspecialchars($dev['ip_address']); ?>
-                        </div>
-                    </div>
-                </div>
-                
-                <?php if(!$is_current): ?>
-                    <?php endif; ?>
-            </div>
-
-            <?php endwhile; else: ?>
-                <p style="color:var(--text-muted); font-size:0.9rem; text-align:center;">Belum ada data perangkat tersimpan. Silakan Logout dan Login kembali.</p>
-            <?php endif; ?>
         </div>
 
         <hr style="border:0; border-top:1px solid #e5e7eb; margin:40px 0;">
@@ -808,11 +808,13 @@ if (isset($_POST['send_logs_email'])) {
         </div>
 
         <div style="display:flex; gap:10px; margin-top: 20px;">
-            <form method="POST" style="flex: 1;">
-                <button type="submit" name="send_logs_email" class="popup-btn" style="background:#000; color:white; border:none; display:flex; align-items:center; justify-content: center; gap:8px; width: 100%;">
+            <form method="POST" style="flex: 1;" id="csvForm">
+                <button type="button" onclick="submitCSVForm()" id="btnSendCSV" class="popup-btn" style="background:#000; color:white; border:none; display:flex; align-items:center; justify-content: center; gap:8px; width: 100%;">
                     <i class='bx bx-envelope'></i> 
-                    <span>Kirim CSV</span>
+                    <span id="csvButtonText">Kirim CSV</span>
+                    <i class='bx bx-loader-alt bx-spin' id="csvLoadingIcon" style="display:none; font-size:1.2rem;"></i>
                 </button>
+                <input type="hidden" name="send_logs_email" value="1">
             </form>
             
             <button onclick="closeModal('modalLogs')" class="popup-btn" style="flex: 1; background:#f3f4f6; color:#111; border: 1px solid #e5e7eb;">
@@ -1171,6 +1173,28 @@ if (isset($_POST['send_logs_email'])) {
         
         // Buka modal secara otomatis
         openLogsModal();
+    }
+
+    // Tambahkan di dalam tag <script> Anda:
+
+    function submitCSVForm() {
+        const form = document.getElementById('csvForm');
+        const button = document.getElementById('btnSendCSV');
+        const textSpan = document.getElementById('csvButtonText');
+        const loadingIcon = document.getElementById('csvLoadingIcon');
+        
+        // 1. Tampilkan status loading
+        button.disabled = true;
+        button.style.opacity = '0.7';
+        textSpan.innerText = 'Mengirim...';
+        loadingIcon.style.display = 'inline-block';
+        
+        // 2. Kirim form (PHP akan me-redirect setelah selesai)
+        form.submit();
+        
+        // Catatan: Karena PHP melakukan redirect (header("Location:...")), 
+        // kita tidak perlu logika 'success' di JS. Halaman akan reload
+        // dan menampilkan popup status (success/error) dari PHP.
     }
 
 </script>

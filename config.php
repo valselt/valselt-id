@@ -315,6 +315,21 @@ function logActivity($conn, $uid, $action) {
     $conn->query("INSERT INTO logsuser (id_user, behaviour) VALUES ('$uid', '$action')");
 }
 
+// Di dalam config.php, setelah fungsi logActivity
+
+function handleRememberMe($conn, $uid) {
+    // 1. Buat Token Random
+    $token = bin2hex(random_bytes(32));
+    
+    // 2. Simpan Token di Database
+    $conn->query("UPDATE users SET remember_token='$token' WHERE id='$uid'");
+    
+    // 3. Simpan Token di Cookie Browser (30 Hari)
+    // Format cookie: "user_id:token"
+    $cookie_value = $uid . ':' . $token;
+    setcookie('remember_token', $cookie_value, time() + (86400 * 30), "/", "", false, true);
+}
+
 function sendLogEmail($toEmail, $username, $csvContent) {
     global $mail_host, $mail_port, $mail_user, $mail_pass, $mail_from_name, $conn;
     
@@ -444,4 +459,6 @@ function sendLogEmail($toEmail, $username, $csvContent) {
         return true;
     } catch (Exception $e) { return false; }
 }
+
+
 ?>

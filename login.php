@@ -53,17 +53,7 @@ if (isset($_POST['login'])) {
                 // ----------------------------
                 // --- TAMBAHAN LOGIKA REMEMBER ME ---
                 if (isset($_POST['remember_me'])) {
-                    // 1. Buat Token Random
-                    $token = bin2hex(random_bytes(32));
-                    
-                    // 2. Simpan Token di Database
-                    $uid = $row['id'];
-                    $conn->query("UPDATE users SET remember_token='$token' WHERE id='$uid'");
-                    
-                    // 3. Simpan Token di Cookie Browser (30 Hari)
-                    // Format cookie: "user_id:token" (agar pencarian di DB cepat)
-                    $cookie_value = $uid . ':' . $token;
-                    setcookie('remember_token', $cookie_value, time() + (86400 * 30), "/", "", false, true);
+                    handleRememberMe($conn, $row['id']);
                 }
                 // -----------------------------------
                 processSSORedirect($conn, $row['id'], $redirect_to);

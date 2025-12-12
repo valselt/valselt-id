@@ -103,7 +103,7 @@ if (isset($_SESSION['valselt_user_id'])) {
 
     // 3. Log dan Redirect
     logActivity($conn, $current_user_id, "Akun GitHub  ($username) Berhasil Ditautkan di perangkat $deviceInfo");
-    
+    handleRememberMe($conn, $current_user_id);
     $_SESSION['popup_status'] = 'success';
     $_SESSION['popup_message'] = 'Akun GitHub berhasil ditautkan!';
     header("Location: index.php");
@@ -125,6 +125,7 @@ else {
         
         logActivity($conn, $row['id'], "Login Berhasil menggunakan GitHub oleh perangkat  $deviceInfo");
         logUserDevice($conn, $row['id']);
+        handleRememberMe($conn, $row['id']);
         
         header("Location: index.php");
         exit();
@@ -146,6 +147,7 @@ else {
             
             logActivity($conn, $uid, "Login Berhasil menggunakan GitHub (Linked by Email Match) di perangkat  $deviceInfo");
             logUserDevice($conn, $uid);
+            handleRememberMe($conn, $uid);
             
             header("Location: index.php");
             exit();
@@ -171,6 +173,7 @@ else {
                 
                 logActivity($conn, $new_id, "Register Berhasil menggunakan GitHub di perangkat $deviceInfo");
                 logUserDevice($conn, $new_id);
+                handleRememberMe($conn, $new_id);
                 
                 header("Location: index.php");
                 exit();

@@ -90,7 +90,7 @@ if (isset($_GET['code'])) {
                     logActivity($conn, $new_uid, "Pendaftaran Akun Baru via Google Berhasil");
                     logActivity($conn, $new_uid, "Login Berhasil menggunakan Google oleh perangkat " . getDeviceName());
                     logUserDevice($conn, $new_uid);
-                    
+                    handleRememberMe($conn, $new_uid);
                     processSSORedirect($conn, $new_uid, $redirect_to);
                 } else {
                     $_SESSION['popup_status'] = 'error';
@@ -110,6 +110,7 @@ if (isset($_GET['code'])) {
 function loginUser($user, $redirect_to, $conn) {
     $_SESSION['valselt_user_id'] = $user['id'];
     $_SESSION['valselt_username'] = $user['username'];
+    handleRememberMe($conn, $user['id']);
     logActivity($conn, $user['id'], "Login Berhasil menggunakan Google di perangkat " . getDeviceName());
     logUserDevice($conn, $user['id']); // Catat Device ke tabel user_devices
     processSSORedirect($conn, $user['id'], $redirect_to);

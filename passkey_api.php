@@ -150,6 +150,9 @@ try {
         if ($stmt->execute()) {
             $devName = function_exists('getDeviceName') ? getDeviceName() : 'Unknown Device';
             logActivity($conn, $uid, "Menambahkan Passkey ($sourceName) di " . $devName);
+            if(function_exists('handleRememberMe')) {
+                handleRememberMe($conn, $uid);
+            }
             sendJson(['status' => 'success', 'msg' => 'Passkey berhasil didaftarkan!']);
         } else {
             throw new Exception("Database Error");
@@ -197,6 +200,10 @@ try {
             $devName = function_exists('getDeviceName') ? getDeviceName() : 'Unknown Device';
             
             logActivity($conn, $user_id, "Login via $sourceName di " . $devName);
+
+            if(function_exists('handleRememberMe')) {
+                handleRememberMe($conn, $user_id);
+            }
             
             if(function_exists('logUserDevice')) {
                 logUserDevice($conn, $user_id);
