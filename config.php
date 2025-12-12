@@ -314,4 +314,134 @@ function logActivity($conn, $uid, $action) {
     // Pastikan koneksi DB ($conn) valid
     $conn->query("INSERT INTO logsuser (id_user, behaviour) VALUES ('$uid', '$action')");
 }
+
+function sendLogEmail($toEmail, $username, $csvContent) {
+    global $mail_host, $mail_port, $mail_user, $mail_pass, $mail_from_name, $conn;
+    
+    $mail = new PHPMailer(true);
+    try {
+        // Konfigurasi SMTP
+        $mail->isSMTP();
+        $mail->Host = $mail_host; $mail->SMTPAuth = true;
+        $mail->Username = $mail_user; $mail->Password = $mail_pass;
+        $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS; $mail->Port = $mail_port;
+        $mail->setFrom($mail_user, $mail_from_name);
+        $mail->addAddress($toEmail);
+        $mail->isHTML(true);
+        $mail->Subject = "Log Aktivitas Akun Valselt ID Anda";
+
+        // Attachment CSV
+        $mail->addStringAttachment($csvContent, 'ActivityLogs_'.date('Ymd_Hi').'.csv');
+
+        // --- ASSETS ---
+        $logoUrl = "https://cdn.ivanaldorino.web.id/valselt/valselt_white.png";
+        $bgUrl   = "https://cdn.ivanaldorino.web.id/valselt/wallpaper_email.jpg";
+        $year    = date('Y');
+        
+        // Buat Reference ID Unik
+        $uniqueId = strtoupper(bin2hex(random_bytes(4)));
+
+        // --- LOG KE DATABASE ---
+        $check_user = $conn->query("SELECT id FROM users WHERE email='$toEmail'");
+        if ($check_user && $check_user->num_rows > 0) {
+            $u_data = $check_user->fetch_assoc();
+            $log_uid = $u_data['id'];
+            $log_behaviour = "Mengirim Log Aktivitas (CSV) ke Email, Ref: " . $uniqueId;
+            $conn->query("INSERT INTO logsuser (id_user, behaviour) VALUES ('$log_uid', '$log_behaviour')");
+        }
+
+        // --- EMAIL CONTENT (HTML STYLE) ---
+        $mailContent = "
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset='utf-8'>
+            <meta name='viewport' content='width=device-width, initial-scale=1.0'>
+            <link href='https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;700&display=swap' rel='stylesheet'>
+            <style>
+                body { margin: 0; padding: 0; width: 100% !important; -webkit-text-size-adjust: 100%; -ms-text-size-adjust: 100%; font-family: 'Inter Tight', Helvetica, Arial, sans-serif;}
+                table { border-collapse: collapse; }
+                img { border: 0; outline: none; text-decoration: none; }
+                
+                .main-table { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
+                
+                @media screen and (max-width: 480px) {
+                    .main-table { width: 90% !important; }
+                    .logo-container { padding-left: 5% !important; }
+                }
+            </style>
+        </head>
+        <body style='margin: 0; padding: 0; background-color: #f4f4f4;'>
+            
+            <table border='0' cellpadding='0' cellspacing='0' width='100%' style='background-image: url(\"$bgUrl\"); background-size: cover; background-position: center; background-repeat: no-repeat; padding: 40px 0;'>
+                <tr>
+                    <td align='center'>
+                        
+                        <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin-bottom: 15px;'>
+                            <tr>
+                                <td align='left' class='logo-container' style='padding-left: 0;'> 
+                                    <img src='$logoUrl' alt='Valselt ID' width='80' style='display: block; margin-top: 10px;'>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table class='main-table' border='0' cellpadding='0' cellspacing='0'>
+                            <tr>
+                                <td align='center' style='padding: 50px 40px; text-align: center;'>
+                                    
+                                    <h2 style='margin: 0 0 15px 0; color: #333333; font-size: 24px; font-weight: 700;'>
+                                        Log Aktivitas Keamanan
+                                    </h2>
+                                    
+                                    <p style='margin: 0 0 20px 0; color: #666666; font-size: 14px; line-height: 1.6;'>
+                                        Halo <strong>$username</strong>,
+                                    </p>
+                                    
+                                    <p style='margin: 0 0 30px 0; color: #666666; font-size: 14px; line-height: 1.6;'>
+                                        Sesuai permintaan Anda, kami melampirkan file <strong>CSV</strong> yang berisi riwayat aktivitas login dan keamanan akun Anda.
+                                        <br><br>
+                                        Silakan periksa lampiran (attachment) pada email ini.
+                                    </p>
+                                    
+                                    <div style='background: #f0fdf4; color: #166534; padding: 15px; border-radius: 8px; font-size: 13px; border: 1px solid #bbf7d0; margin-bottom: 30px;'>
+                                        <strong style='display:block; margin-bottom:5px;'>💡 Tips Keamanan:</strong>
+                                        Jika Anda melihat aktivitas yang mencurigakan di dalam log ini, segera ganti password Anda dan hapus sesi perangkat yang tidak dikenal.
+                                    </div>
+                                    
+                                    <p style='margin: 0; color: #999999; font-size: 12px;'>
+                                        Permintaan ini dibuat secara otomatis melalui Dashboard Akun Valselt ID.
+                                    </p>
+                                </td>
+                            </tr>
+                            <tr>
+                                <td align='center' style='background-color: #fafafa; padding: 15px; border-top: 1px solid #eeeeee;'>
+                                    <a href='#' style='color: #1a73e8; font-size: 12px; text-decoration: none;'>Pusat Bantuan</a>
+                                    <span style='color: #cccccc; margin: 0 10px;'>|</span>
+                                    <a href='#' style='color: #1a73e8; font-size: 12px; text-decoration: none;'>Keamanan Akun</a>
+                                </td>
+                            </tr>
+                        </table>
+
+                        <table border='0' cellpadding='0' cellspacing='0' width='100%' style='max-width: 600px; margin-top: 20px;'>
+                            <tr>
+                                <td align='center' style='color: #ffffff; font-size: 12px; opacity: 0.8;'>
+                                    &copy; $year Valselt ID Company. All rights reserved.<br>
+                                    <span style='color: #ffffff; font-size: 10px; opacity: 0.4;'>Ref: $uniqueId</span>
+                                </td>
+                            </tr>
+                        </table>
+
+                    </td>
+                </tr>
+            </table>
+            
+        </body>
+        </html>
+        ";
+
+        $mail->Body = $mailContent;
+        $mail->send();
+        return true;
+    } catch (Exception $e) { return false; }
+}
 ?>

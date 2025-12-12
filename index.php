@@ -6,6 +6,8 @@ if (!isset($_SESSION['valselt_user_id'])) {
 }
 
 $user_id = $_SESSION['valselt_user_id'];
+$u_res = $conn->query("SELECT * FROM users WHERE id='$user_id'");
+$user_data = $u_res->fetch_assoc();
 
 // --- AJAX HANDLER UNTUK GANTI PASSWORD ---
 if (isset($_POST['ajax_action'])) {
@@ -248,8 +250,39 @@ if (isset($_POST['delete_account'])) {
     header("Location: login.php"); exit();
 }
 
-$u_res = $conn->query("SELECT * FROM users WHERE id='$user_id'");
-$user_data = $u_res->fetch_assoc();
+// ... (Kode sebelumnya: delete_account, delete_passkey, dll)
+
+// --- LOGIC KIRIM LOGS KE EMAIL (CSV) ---
+// --- LOGIC KIRIM LOGS KE EMAIL (CSV) ---
+if (isset($_POST['send_logs_email'])) {
+    // Ganti activity_logs menjadi logsuser
+    $q_logs = $conn->query("SELECT behaviour, created_at FROM logsuser WHERE id_user='$user_id' ORDER BY id DESC");
+    
+    if ($q_logs && $q_logs->num_rows > 0) {
+        $csv_data = "Waktu,Aktivitas\n"; // Header CSV
+        while ($log = $q_logs->fetch_assoc()) {
+            $date = isset($log['created_at']) ? date('Y-m-d H:i:s', strtotime($log['created_at'])) : '-';
+            // Bersihkan koma agar format CSV tidak rusak
+            $act  = str_replace(',', ';', $log['behaviour']); 
+            $csv_data .= "$date,$act\n";
+        }
+
+        if (sendLogEmail($user_data['email'], $user_data['username'], $csv_data)) {
+            $_SESSION['popup_status'] = 'success';
+            $_SESSION['popup_message'] = 'Log aktivitas telah dikirim ke email Anda.';
+        } else {
+            $_SESSION['popup_status'] = 'error';
+            $_SESSION['popup_message'] = 'Gagal mengirim email.';
+        }
+    } else {
+        $_SESSION['popup_status'] = 'warning';
+        $_SESSION['popup_message'] = 'Belum ada data log untuk dikirim.';
+    }
+    header("Location: index.php"); exit();
+}
+// ...
+
+
 ?>
 
 <!DOCTYPE html>
@@ -495,8 +528,27 @@ $user_data = $u_res->fetch_assoc();
 
         <hr style="border:0; border-top:1px solid #e5e7eb; margin:40px 0;">
 
+        <div style="background: #fffbeb; padding: 25px; border-radius: 12px; border: 1px solid #fef3c7; margin-bottom: 30px;">
+            <div style="display:flex; align-items:center; margin-bottom: 20px; color: #ca8a04;">
+                <i class='bx bx-show' style="font-size: 1.2rem; margin-right: 10px;"></i>
+                <h4 style="font-weight:600;">Privacy Zone</h4>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:15px;">
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+                    <div>
+                        <div style="font-weight:600; color: #b45309;">Logs Akun</div>
+                        <div style="font-size:0.85rem; color: #ca8a04; opacity: 0.8; max-width: 300px; line-height: 1.5;">
+                            Melihat riwayat aktivitas keamanan akun Anda.
+                        </div>
+                    </div>
+                    <button type="button" onclick="openLogsModal()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s;">
+                        <i class='bx bx-receipt' style="font-size: 1.2rem;"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div style="background: #fff5f5; padding: 25px; border-radius: 12px; border: 1px solid #fed7d7;">
-            
             <div style="display:flex; align-items:center; margin-bottom: 20px; color: #c53030;">
                 <i class='bx bx-error' style="font-size: 1.2rem; margin-right: 10px;"></i>
                 <h4 style="font-weight:600;">Danger Zone</h4>
@@ -532,6 +584,8 @@ $user_data = $u_res->fetch_assoc();
 
             
         </div>
+
+        
 
         <div style="text-align:center; margin-top: 40px;">
             <a href="logout.php" class="btn btn-logout" style="display:inline-flex; align-items:center; justify-content: center; gap:8px; text-decoration:none; padding:12px 30px; border-radius:50px; font-weight:600;">
@@ -680,6 +734,91 @@ $user_data = $u_res->fetch_assoc();
         <p class="popup-message" id="generic_error_text">Terjadi kesalahan.</p>
         
         <button onclick="closeModal('modalGenericError')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer;">Tutup</button>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalLogs" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box" style="width: 600px; max-width: 95%;">
+        
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+            <div style="display:flex; align-items:center;">
+                <h3 class="popup-title" style="margin:0;"><i class='bx bx-history'></i> Aktivitas</h3>
+            </div>
+
+            <form method="GET" style="margin:0;">
+                <select name="logs_limit" onchange="this.form.submit()" class="logs-select">
+                    <?php 
+                    // Ambil nilai limit dari URL, default 50
+                    $curr_limit = isset($_GET['logs_limit']) ? $_GET['logs_limit'] : '50'; 
+                    ?>
+                    <option value="50" <?php if($curr_limit == '50') echo 'selected'; ?>>50 Terakhir</option>
+                    <option value="100" <?php if($curr_limit == '100') echo 'selected'; ?>>100 Terakhir</option>
+                    <option value="all" <?php if($curr_limit == 'all') echo 'selected'; ?>>Tampilkan Semua</option>
+                </select>
+            </form>
+        </div>
+
+        <div style="max-height: 400px; overflow-y: auto; margin-bottom: 20px; border: 1px solid #e5e7eb; border-radius: 8px;">
+            <table style="width:100%; border-collapse: separate; border-spacing: 0 10px; padding: 0 10px; font-size: 0.85rem;">
+                
+                <thead style="position: sticky; top: 0; background: white; z-index: 1;">
+                    <tr>
+                        <th style="padding: 5px 10px; text-align: center; color:var(--text-muted); font-weight:500; font-size:0.8rem; width: 30%;">Waktu</th>
+                        <th style="padding: 5px 10px; text-align: center; color:var(--text-muted); font-weight:500; font-size:0.8rem;">Aktivitas</th>
+                    </tr>
+                </thead>
+                
+                <tbody>
+                    <?php
+                    // LOGIKA SQL LIMIT DINAMIS
+                    $limit_sql = "LIMIT 50"; // Default
+                    if ($curr_limit == '100') {
+                        $limit_sql = "LIMIT 100";
+                    } elseif ($curr_limit == 'all') {
+                        $limit_sql = ""; // Tidak ada limit
+                    }
+
+                    $log_res = $conn->query("SELECT * FROM logsuser WHERE id_user='$user_id' ORDER BY id DESC $limit_sql");
+                    
+                    if ($log_res && $log_res->num_rows > 0):
+                        while($log = $log_res->fetch_assoc()):
+                            $dateDisplay = isset($log['created_at']) ? date('d M Y, H:i', strtotime($log['created_at'])) : '-';
+                    ?>
+                    <tr style="vertical-align: middle;">
+                        <td style="padding-right: 15px;">
+                            <div style="background: #b45309; color: #fff; padding: 10px 5px; border-radius: 6px; text-align: center; box-shadow: 0 2px 5px rgba(0,0,0,0.1); font-weight: 600; font-size: 0.8rem;">
+                                <?php echo $dateDisplay; ?>
+                            </div>
+                        </td>
+
+                        <td style="padding: 10px; color:var(--text-main); border-bottom: 1px solid #f3f4f6; line-height: 1.5;">
+                            <?php echo htmlspecialchars($log['behaviour']); ?>
+                        </td>
+                    </tr>
+                    <?php endwhile; else: ?>
+                    <tr>
+                        <td colspan="2" style="padding: 30px; text-align: center; color:var(--text-muted);">
+                            <i class='bx bx-ghost' style="font-size: 2rem; margin-bottom: 10px; display:block;"></i>
+                            Belum ada aktivitas tercatat.
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <div style="display:flex; gap:10px; margin-top: 20px;">
+            <form method="POST" style="flex: 1;">
+                <button type="submit" name="send_logs_email" class="popup-btn" style="background:#000; color:white; border:none; display:flex; align-items:center; justify-content: center; gap:8px; width: 100%;">
+                    <i class='bx bx-envelope'></i> 
+                    <span>Kirim CSV</span>
+                </button>
+            </form>
+            
+            <button onclick="closeModal('modalLogs')" class="popup-btn" style="flex: 1; background:#f3f4f6; color:#111; border: 1px solid #e5e7eb;">
+                Tutup
+            </button>
+        </div>
     </div>
 </div>
 
@@ -1020,9 +1159,19 @@ $user_data = $u_res->fetch_assoc();
         document.getElementById('generic_error_text').innerText = message;
         openModal('modalGenericError');
     }
-    
 
+    function openLogsModal() {
+        openModal('modalLogs');
+    }
 
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.has('logs_limit')) {
+        // Hapus parameter dari URL agar bersih (opsional, tapi bagus untuk UX)
+        window.history.replaceState({}, document.title, window.location.pathname);
+        
+        // Buka modal secara otomatis
+        openLogsModal();
+    }
 
 </script>
 
