@@ -84,44 +84,61 @@ if (isset($_POST['ajax_action'])) {
 
     // 4. NONAKTIFKAN 2FA (Dengan Verifikasi Kode)
     elseif ($_POST['ajax_action'] == 'disable_2fa_secure') {
-        $code = $_POST['otp_code'];
+        $code = trim($_POST['otp_code']);
         
-        // Ambil secret dari DB untuk verifikasi
-        $q = $conn->query("SELECT two_factor_secret FROM users WHERE id='$uid'");
+        // Ambil secret & backup dari DB
+        $q = $conn->query("SELECT two_factor_secret, two_factor_backup FROM users WHERE id='$uid'");
         $u = $q->fetch_assoc();
-        $secret = $u['two_factor_secret'];
-
+        
+        $isValid = false;
         $google2fa = new \PragmaRX\Google2FA\Google2FA();
-        if ($google2fa->verifyKey($secret, $code)) {
+
+        // Cek apakah ini Kode Backup (Panjang 32) atau OTP (6 Digit)
+        if (strlen($code) == 32 && $code === $u['two_factor_backup']) {
+            $isValid = true;
+            logActivity($conn, $uid, "Menonaktifkan 2FA menggunakan Kode Backup");
+        } elseif ($google2fa->verifyKey($u['two_factor_secret'], $code)) {
+            $isValid = true;
+            logActivity($conn, $uid, "Menonaktifkan 2FA menggunakan Authenticator");
+        }
+
+        if ($isValid) {
             // Kode Benar -> Hapus Data
             $conn->query("UPDATE users SET two_factor_secret=NULL, two_factor_name=NULL, two_factor_backup=NULL, is_2fa_enabled=0 WHERE id='$uid'");
-            logActivity($conn, $uid, "Menonaktifkan 2FA Authenticator");
             
             $_SESSION['popup_status'] = 'success';
             $_SESSION['popup_message'] = 'Authenticator berhasil dimatikan.';
             
             echo json_encode(['status' => 'success']);
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'Incorrect Code!']);
+            echo json_encode(['status' => 'error', 'message' => 'Kode salah!']);
         }
         exit();
     }
 
     elseif ($_POST['ajax_action'] == 'verify_2fa_general') {
-        $code = $_POST['otp_code'];
+        $code = trim($_POST['otp_code']);
         
-        // Ambil secret dari DB
-        $q = $conn->query("SELECT two_factor_secret FROM users WHERE id='$uid'");
+        // Ambil secret & backup dari DB
+        $q = $conn->query("SELECT two_factor_secret, two_factor_backup FROM users WHERE id='$uid'");
         $u = $q->fetch_assoc();
         
         if (empty($u['two_factor_secret'])) {
-            // Jika user ternyata tidak punya 2FA (bypass logic error)
             echo json_encode(['status' => 'success']); 
             exit();
         }
 
+        $isValid = false;
         $google2fa = new \PragmaRX\Google2FA\Google2FA();
-        if ($google2fa->verifyKey($u['two_factor_secret'], $code)) {
+
+        // Cek Backup Code atau OTP
+        if (strlen($code) == 32 && $code === $u['two_factor_backup']) {
+            $isValid = true;
+        } elseif ($google2fa->verifyKey($u['two_factor_secret'], $code)) {
+            $isValid = true;
+        }
+
+        if ($isValid) {
             echo json_encode(['status' => 'success']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Kode salah!']);
@@ -1101,19 +1118,27 @@ if (isset($_POST['send_logs_email'])) {
     <div class="popup-box">
         <div class="popup-icon-box error"><i class='bx bx-lock-open'></i></div>
         <h3 class="popup-title">Disable Two-Step Verification?</h3>
-        <p class="popup-message">Enter the 6-digit code from your authenticator app to confirm.</p>
+        
+        <p class="popup-message" id="msg_disable_otp">Enter the 6-digit code from your authenticator app to confirm.</p>
+        <p class="popup-message" id="msg_disable_backup" style="display:none;">Enter your 32-character Backup Code to confirm.</p>
         
         <div class="form-group">
-            <input type="text" id="2fa_disable_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:1.2rem;" maxlength="6">
+            <input type="text" id="2fa_disable_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:3px; font-size:1.1rem;">
             
             <p id="disable_2fa_error" style="color:#ef4444; font-size:0.85rem; margin-top:8px; display:none; font-weight:500;">
                 Incorrect code!
             </p>
         </div>
         
-        <div style="display:flex; gap:10px; margin-top:15px;">
+        <div style="margin-bottom: 15px; margin-top: -10px;">
+            <a href="#" onclick="toggleBackupMode('disable')" id="link_disable_backup" style="font-size:0.85rem; color:var(--primary); font-weight:600; text-decoration:none;">
+                Use Backup Code Instead
+            </a>
+        </div>
+        
+        <div style="display:flex; gap:10px;">
             <button onclick="closeModal('modalDisable2FA')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
-            <button onclick="confirmDisable2FA()" class="popup-btn error" id="btnDisable2FA">Disable</button>
+            <button onclick="confirmDisable2FA()" class="popup-btn error" id="btnDisable2FA">Disable 2FA</button>
         </div>
     </div>
 </div>
@@ -1316,13 +1341,21 @@ if (isset($_POST['send_logs_email'])) {
     <div class="popup-box">
         <div class="popup-icon-box warning"><i class='bx bx-shield-quarter'></i></div>
         <h3 class="popup-title">Two-Step Verification</h3>
-        <p class="popup-message">For security reasons, an additional verification is required because an authenticator is enabled on your account. Please enter the verification code to continue.</p>
         
-        <input type="text" id="2fa_action_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:1.2rem; margin-bottom:10px;" maxlength="6">
+        <p class="popup-message" id="msg_action_otp">For security reasons, an additional verification is required because an authenticator is enabled on your account. Please enter the verification code to continue.</p>
+        <p class="popup-message" id="msg_action_backup" style="display:none;">Enter your 32-character Backup Code.</p>
         
-        <p id="action_2fa_error" style="color:#ef4444; font-size:0.85rem; margin-bottom:15px; display:none; font-weight:500;">
-            Kode salah!
+        <input type="text" id="2fa_action_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:3px; font-size:1.1rem; margin-bottom:10px;">
+        
+        <p id="action_2fa_error" style="color:#ef4444; font-size:0.85rem; margin-bottom:10px; display:none; font-weight:500;">
+            Incorrect code!
         </p>
+
+        <div style="margin-bottom: 20px;">
+            <a href="#" onclick="toggleBackupMode('action')" id="link_action_backup" style="font-size:0.85rem; color:var(--primary); font-weight:600; text-decoration:none;">
+                Use Backup Code Instead
+            </a>
+        </div>
 
         <div style="display:flex; gap:10px;">
             <button onclick="closeModal('modalVerify2FAAction')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
@@ -1441,6 +1474,9 @@ if (isset($_POST['send_logs_email'])) {
         el.style.backdropFilter = 'blur(0px)';
         box.style.transform = 'scale(0.93) translateY(12px)';
         box.style.opacity = '0';
+
+        if (id === 'modalVerify2FAAction') resetInputToOTP('action');
+        if (id === 'modalDisable2FA') resetInputToOTP('disable');
 
         // Setelah animasi selesai → sembunyikan
         setTimeout(() => {
@@ -1889,45 +1925,6 @@ if (isset($_POST['send_logs_email'])) {
         openModal('modalDisable2FA');
     }
 
-    // --- DISABLE 2FA: PROSES VERIFIKASI & HAPUS ---
-    function confirmDisable2FA() {
-        const codeInput = document.getElementById('2fa_disable_input');
-        const code = codeInput.value;
-        const btn = document.getElementById('btnDisable2FA');
-        const errorMsg = document.getElementById('disable_2fa_error');
-
-        // Reset Error
-        errorMsg.style.display = 'none';
-
-        if(code.length < 6) { 
-            errorMsg.innerText = "Masukkan kode 6 digit.";
-            errorMsg.style.display = 'block';
-            return; 
-        }
-
-        btn.innerText = "Memproses..."; btn.disabled = true;
-
-        const formData = new FormData();
-        formData.append('ajax_action', 'disable_2fa_secure');
-        formData.append('otp_code', code);
-
-        fetch('index.php', { method: 'POST', body: formData })
-        .then(r => r.json())
-        .then(data => {
-            if(data.status === 'success') {
-                location.reload(); // Reload untuk tampilkan popup sukses
-            } else {
-                // JANGAN ALERT, TAPI TAMPILKAN DI MODAL
-                errorMsg.innerText = data.message; // "Kode salah. Gagal menonaktifkan."
-                errorMsg.style.display = 'block';
-                
-                btn.innerText = "Matikan"; btn.disabled = false;
-                codeInput.value = ""; // Kosongkan input biar user bisa ketik ulang
-                codeInput.focus();
-            }
-        });
-    }
-
     function checkSecurityAndExecute(actionCallback) {
         if (is2FAEnabled) {
             // Jika 2FA aktif, tahan aksi dan buka modal verifikasi
@@ -1941,21 +1938,58 @@ if (isset($_POST['send_logs_email'])) {
         }
     }
 
+    function toggleBackupMode(type) {
+        // type bisa 'action' (security check) atau 'disable' (matikan 2fa)
+        
+        const input = document.getElementById(`2fa_${type}_input`);
+        const link = document.getElementById(`link_${type}_backup`);
+        const msgOtp = document.getElementById(`msg_${type}_otp`);
+        const msgBackup = document.getElementById(`msg_${type}_backup`);
+        
+        // Cek mode saat ini berdasarkan placeholder
+        const isOtpMode = input.placeholder === "000000";
+        
+        if (isOtpMode) {
+            // Switch ke Backup Mode
+            input.placeholder = "Masukkan Kode Backup";
+            input.maxLength = 32;
+            input.style.letterSpacing = "1px";
+            input.style.fontSize = "0.95rem"; // Kecilkan font biar muat
+            input.value = "";
+            
+            link.innerText = "Gunakan Authenticator App";
+            msgOtp.style.display = "none";
+            msgBackup.style.display = "block";
+        } else {
+            // Switch balik ke OTP Mode
+            input.placeholder = "000000";
+            input.maxLength = 6;
+            input.style.letterSpacing = "5px"; // Balikin spasi lebar
+            input.style.fontSize = "1.2rem";
+            input.value = "";
+            
+            link.innerText = "Gunakan Kode Backup";
+            msgOtp.style.display = "block";
+            msgBackup.style.display = "none";
+        }
+    }
+
     function submit2FAAction() {
-        const codeInput = document.getElementById('2fa_action_input');
-        const code = codeInput.value;
+        const input = document.getElementById('2fa_action_input');
+        const code = input.value.trim();
         const btn = document.getElementById('btnAction2FA');
         const errorMsg = document.getElementById('action_2fa_error');
 
         errorMsg.style.display = 'none';
 
-        if(code.length < 6) {
-            errorMsg.innerText = "Masukkan 6 digit kode.";
+        // Validasi Panjang: Harus 6 (OTP) atau 32 (Backup)
+        if(code.length !== 6 && code.length !== 32) {
+            errorMsg.innerText = "Kode tidak valid (Harus 6 digit atau 32 karakter backup).";
             errorMsg.style.display = 'block';
             return;
         }
 
-        btn.innerText = "Checking..."; btn.disabled = true;
+        btn.innerText = "Memeriksa..."; btn.disabled = true;
 
         const formData = new FormData();
         formData.append('ajax_action', 'verify_2fa_general');
@@ -1968,18 +2002,71 @@ if (isset($_POST['send_logs_email'])) {
             
             if(data.status === 'success') {
                 closeModal('modalVerify2FAAction');
-                // Jalankan aksi yang tertunda tadi
+                // Reset mode tampilan ke default (OTP) untuk pemakaian berikutnya
+                resetInputToOTP('action');
+                
                 if (typeof pendingAction === 'function') {
                     pendingAction();
-                    pendingAction = null; // Reset
+                    pendingAction = null; 
                 }
             } else {
                 errorMsg.innerText = data.message;
                 errorMsg.style.display = 'block';
-                codeInput.value = "";
-                codeInput.focus();
+                input.value = "";
+                input.focus();
             }
         });
+    }
+    function confirmDisable2FA() {
+        const input = document.getElementById('2fa_disable_input');
+        const code = input.value.trim();
+        const btn = document.getElementById('btnDisable2FA');
+        const errorMsg = document.getElementById('disable_2fa_error');
+
+        errorMsg.style.display = 'none';
+
+        if(code.length !== 6 && code.length !== 32) {
+            errorMsg.innerText = "Kode tidak valid.";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        btn.innerText = "Memproses..."; btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'disable_2fa_secure');
+        formData.append('otp_code', code);
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                location.reload(); 
+            } else {
+                errorMsg.innerText = data.message;
+                errorMsg.style.display = 'block';
+                btn.innerText = "Matikan"; btn.disabled = false;
+                input.value = ""; 
+                input.focus();
+            }
+        });
+    }
+
+    function resetInputToOTP(type) {
+        const input = document.getElementById(`2fa_${type}_input`);
+        const link = document.getElementById(`link_${type}_backup`);
+        const msgOtp = document.getElementById(`msg_${type}_otp`);
+        const msgBackup = document.getElementById(`msg_${type}_backup`);
+        
+        input.placeholder = "000000";
+        input.maxLength = 6;
+        input.style.letterSpacing = "5px";
+        input.style.fontSize = "1.2rem";
+        input.value = "";
+        
+        link.innerText = "Gunakan Kode Backup";
+        msgOtp.style.display = "block";
+        msgBackup.style.display = "none";
     }
 
 
