@@ -106,17 +106,58 @@ if (isset($_GET['code'])) {
     }
 }
 
-// Helper Function Login
+// Helper Function Login (DIMODIFIKASI UNTUK 2FA)
 function loginUser($user, $redirect_to, $conn) {
+    $uid = $user['id'];
+    
+    // 1. Cek Status 2FA User
+    // Kita query ulang untuk memastikan dapat status is_2fa_enabled terbaru
+    $q_cek = $conn->query("SELECT is_2fa_enabled FROM users WHERE id='$uid'");
+    $u_cek = $q_cek->fetch_assoc();
+    
+    // 2. Logika Percabangan 2FA
+    if ($u_cek['is_2fa_enabled'] == 1) {
+        
+        // Cek apakah Device ini TRUSTED?
+        if (checkTrustedDevice($conn, $uid)) {
+            // TRUSTED -> Login Langsung
+            executeLogin($user, $redirect_to, $conn, 'google');
+        } else {
+            // TIDAK TRUSTED -> Redirect ke verify2fa.php
+            $_SESSION['pre_2fa_user_id'] = $uid;
+            $_SESSION['login_method'] = 'google'; // Set durasi trust 6 bulan
+            
+            // Simpan redirect target jika ada
+            if(!empty($redirect_to)) { 
+                $_SESSION['sso_redirect_to'] = $redirect_to; 
+            }
+            
+            // Catat device (untuk nanti diupdate token-nya)
+            logUserDevice($conn, $uid);
+            logActivity($conn, $uid, "Login Google: Meminta Verifikasi 2FA");
+            
+            header("Location: verify2fa.php");
+            exit();
+        }
+    } else {
+        // TIDAK ADA 2FA -> Login Langsung
+        executeLogin($user, $redirect_to, $conn, 'google');
+    }
+}
+
+// Fungsi Eksekusi Login Final (Login Sukses)
+function executeLogin($user, $redirect_to, $conn, $method) {
     $_SESSION['valselt_user_id'] = $user['id'];
     $_SESSION['valselt_username'] = $user['username'];
+    
     handleRememberMe($conn, $user['id']);
-    logActivity($conn, $user['id'], "Login Berhasil menggunakan Google di perangkat " . getDeviceName());
-    logUserDevice($conn, $user['id']); // Catat Device ke tabel user_devices
+    logActivity($conn, $user['id'], "Login Berhasil menggunakan $method di perangkat " . getDeviceName());
+    logUserDevice($conn, $user['id']);
+    
     processSSORedirect($conn, $user['id'], $redirect_to);
 }
 
-// Helper Function SSO (Sama dengan di login.php)
+// Helper Function SSO (Biarkan tetap sama)
 function processSSORedirect($conn, $uid, $target) {
     if (!empty($target)) {
         $parsed_url = parse_url($target);

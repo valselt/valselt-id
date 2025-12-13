@@ -44,19 +44,46 @@ if (isset($_POST['login'])) {
                 $_SESSION['popup_message'] = 'Akun belum aktif. Masukkan OTP.';
                 $_SESSION['popup_redirect'] = 'verify.php';
             } else {
-                $_SESSION['valselt_user_id'] = $row['id'];
-                $_SESSION['valselt_username'] = $row['username'];
-                // [TAMBAHAN BARU] CATAT DEVICE
-                logUserDevice($conn, $row['id']); 
-                $deviceInfo = getDeviceName(); // Ambil nama device
-                logActivity($conn, $row['id'], "Login Berhasil menggunakan Metode Manual (Username/Email) di perangkat $deviceInfo");
-                // ----------------------------
-                // --- TAMBAHAN LOGIKA REMEMBER ME ---
-                if (isset($_POST['remember_me'])) {
-                    handleRememberMe($conn, $row['id']);
+                // ==========================================
+                // MODIFIKASI LOGIKA 2FA DI SINI
+                // ==========================================
+                
+                $uid = $row['id'];
+                
+                // 1. Cek apakah User mengaktifkan 2FA?
+                if ($row['is_2fa_enabled'] == 1) {
+                    
+                    // 2. Cek apakah Device ini TRUSTED?
+                    if (checkTrustedDevice($conn, $uid)) {
+                        // SKIP 2FA -> Login Langsung
+                        doLogin($row, $redirect_to, $conn);
+                    } else {
+                        // WAJIB 2FA -> Redirect ke verify2fa.php
+                        $_SESSION['pre_2fa_user_id'] = $uid; // Simpan ID sementara
+                        $_SESSION['login_method'] = 'manual'; // Tandai metode login
+                        
+                        // Simpan status remember me user (untuk dieksekusi nanti setelah lolos 2FA)
+                        if (isset($_POST['remember_me'])) {
+                            $_SESSION['login_remember_me'] = true;
+                        }
+                        
+                        // Catat Device Dulu (Agar bisa diupdate tokennya nanti)
+                        logUserDevice($conn, $uid); 
+                        logActivity($conn, $uid, "Login Manual: Meminta Verifikasi 2FA");
+                        
+                        header("Location: verify2fa.php");
+                        exit();
+                    }
+                } else {
+                    // Tidak pakai 2FA -> Login Langsung
+                    
+                    // Handle Remember Me disini jika tidak ada 2FA
+                    if (isset($_POST['remember_me'])) {
+                        handleRememberMe($conn, $uid);
+                    }
+                    
+                    doLogin($row, $redirect_to, $conn);
                 }
-                // -----------------------------------
-                processSSORedirect($conn, $row['id'], $redirect_to);
             }
         } else {
             $_SESSION['popup_status'] = 'error'; $_SESSION['popup_message'] = 'Username/Email atau Password salah!';
@@ -79,6 +106,17 @@ function processSSORedirect($conn, $uid, $target) {
         header("Location: index.php");
     }
     exit();
+}
+
+function doLogin($row, $redirect_to, $conn) {
+    $_SESSION['valselt_user_id'] = $row['id'];
+    $_SESSION['valselt_username'] = $row['username'];
+    
+    logUserDevice($conn, $row['id']); 
+    $deviceInfo = getDeviceName(); 
+    logActivity($conn, $row['id'], "Login Berhasil (Manual) di perangkat $deviceInfo");
+    
+    processSSORedirect($conn, $row['id'], $redirect_to);
 }
 ?>
 

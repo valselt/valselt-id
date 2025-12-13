@@ -375,34 +375,54 @@ function getUserLocation($ip) {
 }
 
 function logUserDevice($conn, $uid) {
-    $device = $conn->real_escape_string(getDeviceName());
-    $ip = getRealIP();
+    // 1. Ambil Data Lingkungan
+    $device   = $conn->real_escape_string(getDeviceName());
+    $ip       = getRealIP(); 
+    $location = $conn->real_escape_string(getUserLocation($ip));
+    $sess_id  = session_id();
 
-    $location = getUserLocation($ip);
-    $location = $conn->real_escape_string($location);
+    // 2. Cek Cookie Identitas Device
+    $device_token = isset($_COOKIE['valselt_device_id']) ? $_COOKIE['valselt_device_id'] : null;
+    $found_in_db  = false;
 
-    $sess_id = session_id();
+    if ($device_token) {
+        // Cek apakah token ini terdaftar milik user ini di DB
+        $stmt = $conn->prepare("SELECT id FROM user_devices WHERE device_token = ? AND user_id = ?");
+        $stmt->bind_param("si", $device_token, $uid);
+        $stmt->execute();
+        $res = $stmt->get_result();
 
-    // Cek apakah session ini sudah tercatat
-    $check = $conn->query("SELECT id FROM user_devices WHERE session_id='$sess_id'");
+        if ($res->num_rows > 0) {
+            $found_in_db = true;
+            $row = $res->fetch_assoc();
+            $db_id = $row['id'];
 
-    if ($check->num_rows > 0) {
-        // Update device + lokasi terbaru
-        $conn->query("
-            UPDATE user_devices 
-            SET last_login = NOW(),
-                device_name = '$device',
-                ip_address = '$ip',
-                location = '$location'
-            WHERE session_id = '$sess_id'
-        ");
-    } else {
-        // Insert data baru
-        $conn->query("
-            INSERT INTO user_devices (user_id, device_name, ip_address, location, session_id, last_login, is_active)
-            VALUES ('$uid', '$device', '$ip', '$location', '$sess_id', NOW(), 1)
-        ");
+            // === SKENARIO A: DEVICE LAMA (UPDATE) ===
+            // PERBAIKAN DISINI: Ubah "sssssi" menjadi "ssssi" (5 karakter)
+            $update = $conn->prepare("UPDATE user_devices SET session_id=?, ip_address=?, location=?, last_login=NOW(), device_name=?, is_active=1 WHERE id=?");
+            $update->bind_param("ssssi", $sess_id, $ip, $location, $device, $db_id);
+            $update->execute();
+        }
     }
+
+    if (!$found_in_db) {
+        // === SKENARIO B: DEVICE BARU / COOKIE HILANG (INSERT) ===
+        // 1. Buat Token Baru
+        $new_token = bin2hex(random_bytes(32)); 
+
+        // 2. Tanam Cookie "KTP" di Browser (Berlaku 10 Tahun)
+        setcookie('valselt_device_id', $new_token, time() + (86400 * 365 * 10), "/", "", false, true);
+
+        // 3. Simpan Device Baru ke DB
+        // Format: isssss (Integer, String, String, String, String, String) - Total 6
+        $stmt = $conn->prepare("INSERT INTO user_devices (user_id, device_token, device_name, ip_address, location, session_id, last_login, is_active) VALUES (?, ?, ?, ?, ?, ?, NOW(), 1)");
+        $stmt->bind_param("isssss", $uid, $new_token, $device, $ip, $location, $sess_id);
+        $stmt->execute();
+    }
+
+    // 3. Bersihkan Sesi Ganda (Logout device lain yang punya session_id sama - konflik PHP)
+    // Pastikan token device beda
+    $conn->query("UPDATE user_devices SET is_active = 0 WHERE session_id = '$sess_id' AND device_token != '$device_token'");
 }
 
 
@@ -554,5 +574,27 @@ function sendLogEmail($toEmail, $username, $csvContent) {
         $mail->send();
         return true;
     } catch (Exception $e) { return false; }
+}
+
+function checkTrustedDevice($conn, $uid) {
+    // 1. Cek Cookie Browser
+    if (!isset($_COOKIE['valselt_2fa_trusted'])) {
+        return false; // Tidak ada cookie -> Belum trusted
+    }
+    
+    $token = $_COOKIE['valselt_2fa_trusted'];
+    
+    // 2. Cek Token di Database (Tabel user_devices)
+    // Pastikan token ini milik user yang sedang login ($uid)
+    $stmt = $conn->prepare("SELECT id FROM user_devices WHERE user_id = ? AND two_factor_token = ?");
+    $stmt->bind_param("is", $uid, $token);
+    $stmt->execute();
+    $res = $stmt->get_result();
+    
+    if ($res->num_rows > 0) {
+        return true; // Trusted!
+    }
+    
+    return false; // Token salah/kadaluarsa/device lain
 }
 ?>

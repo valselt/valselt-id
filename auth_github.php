@@ -115,45 +115,61 @@ if (isset($_SESSION['valselt_user_id'])) {
 // KASUS B: PENGGUNA BELUM LOGIN (LOGIN / REGISTER)
 else {
     // 1. Cek apakah GitHub ID sudah ada di database? (Login Langsung)
-    $q = $conn->query("SELECT id, username FROM users WHERE github_id='$github_id'");
+    $q = $conn->query("SELECT * FROM users WHERE github_id='$github_id'"); // Ubah select jadi * agar dapat is_2fa_enabled
     
     if ($q->num_rows > 0) {
-        // LOGIN BERHASIL
+        // --- LOGIN BERHASIL (VIA GITHUB ID) ---
         $row = $q->fetch_assoc();
-        $_SESSION['valselt_user_id'] = $row['id'];
-        $_SESSION['valselt_username'] = $row['username'];
+        $uid = $row['id'];
         
-        logActivity($conn, $row['id'], "Login Berhasil menggunakan GitHub oleh perangkat  $deviceInfo");
-        logUserDevice($conn, $row['id']);
-        handleRememberMe($conn, $row['id']);
-        
-        header("Location: index.php");
-        exit();
+        // Cek 2FA
+        if ($row['is_2fa_enabled'] == 1) {
+            if (checkTrustedDevice($conn, $uid)) {
+                doGithubLogin($row, $conn, $deviceInfo); // Login Langsung
+            } else {
+                // Redirect ke 2FA
+                $_SESSION['pre_2fa_user_id'] = $uid;
+                $_SESSION['login_method'] = 'github';
+                logUserDevice($conn, $uid);
+                logActivity($conn, $uid, "Login GitHub: Meminta Verifikasi 2FA");
+                header("Location: verify2fa.php");
+                exit();
+            }
+        } else {
+            doGithubLogin($row, $conn, $deviceInfo);
+        }
     } 
     
-    // 2. Jika GitHub ID belum ada, cek apakah Emailnya sama dengan user yang ada? (Auto-Link Legacy)
+    // 2. Jika GitHub ID belum ada, cek apakah Emailnya sama? (Auto-Link Legacy)
     else {
-        $q_email = $conn->query("SELECT id FROM users WHERE email='$email'");
+        $q_email = $conn->query("SELECT * FROM users WHERE email='$email'"); // Ubah select jadi *
         
         if ($q_email->num_rows > 0) {
-            // LINK BY EMAIL
+            // --- LINK BY EMAIL MATCH ---
             $row = $q_email->fetch_assoc();
             $uid = $row['id'];
             
+            // Update GitHub ID dulu
             $conn->query("UPDATE users SET github_id='$github_id' WHERE id='$uid'");
             
-            $_SESSION['valselt_user_id'] = $uid;
-            $_SESSION['valselt_username'] = $username; 
-            
-            logActivity($conn, $uid, "Login Berhasil menggunakan GitHub (Linked by Email Match) di perangkat  $deviceInfo");
-            logUserDevice($conn, $uid);
-            handleRememberMe($conn, $uid);
-            
-            header("Location: index.php");
-            exit();
+            // Cek 2FA
+            if ($row['is_2fa_enabled'] == 1) {
+                if (checkTrustedDevice($conn, $uid)) {
+                     doGithubLogin($row, $conn, $deviceInfo);
+                } else {
+                    $_SESSION['pre_2fa_user_id'] = $uid;
+                    $_SESSION['login_method'] = 'github';
+                    logUserDevice($conn, $uid);
+                    logActivity($conn, $uid, "Login GitHub (Link Email): Meminta Verifikasi 2FA");
+                    header("Location: verify2fa.php");
+                    exit();
+                }
+            } else {
+                 doGithubLogin($row, $conn, $deviceInfo);
+            }
         } 
         
-        // 3. REGISTER PENGGUNA BARU
+        // 3. REGISTER PENGGUNA BARU (User Baru tidak mungkin punya 2FA aktif)
         else {
             $random_pass = password_hash(bin2hex(random_bytes(8)), PASSWORD_DEFAULT);
             
@@ -168,6 +184,8 @@ else {
             
             if ($stmt->execute()) {
                 $new_id = $conn->insert_id;
+                
+                // Login langsung (Tanpa 2FA karena user baru)
                 $_SESSION['valselt_user_id'] = $new_id;
                 $_SESSION['valselt_username'] = $username;
                 
@@ -182,5 +200,18 @@ else {
             }
         }
     }
+}
+
+// --- TAMBAHKAN FUNGSI HELPER INI DI PALING BAWAH FILE auth_github.php ---
+function doGithubLogin($row, $conn, $deviceInfo) {
+    $_SESSION['valselt_user_id'] = $row['id'];
+    $_SESSION['valselt_username'] = $row['username'];
+    
+    logActivity($conn, $row['id'], "Login Berhasil menggunakan GitHub oleh perangkat $deviceInfo");
+    logUserDevice($conn, $row['id']);
+    handleRememberMe($conn, $row['id']);
+    
+    header("Location: index.php");
+    exit();
 }
 ?>
