@@ -9,15 +9,24 @@ use Aws\S3\S3Client;
 use Aws\Exception\AwsException;
 use PHPMailer\PHPMailer\PHPMailer;
 use Google\Client as GoogleClient;
+use Dotenv\Dotenv;
 
-// --- DATABASE PUSAT (VALSELT ID) ---
-$db_host = 'host.docker.internal';
-$db_port = 3306;
-$db_user = 'root';
-$db_pass = 'aldorino04';
-$db_name = 'valselt_id'; // Pastikan DB ini sudah dibuat dan tabel users ada disana
+try {
+    $dotenv = Dotenv::createImmutable(__DIR__);
+    $dotenv->load();
+} catch (Exception $e) {
+    // Fallback jika file .env tidak ditemukan (Opsional)
+    die("File konfigurasi .env tidak ditemukan.");
+}
 
-$conn = new mysqli($db_host, $db_user, $db_pass, $db_name, $db_port);
+$conn = new mysqli(
+    $_ENV['DB_HOST'], 
+    $_ENV['DB_USER'], 
+    $_ENV['DB_PASS'], 
+    $_ENV['DB_NAME'], 
+    $_ENV['DB_PORT']
+);
+
 if ($conn->connect_error) die("Koneksi Valselt ID Gagal: " . $conn->connect_error);
 
 // --- AUTO LOGIN CHECK (REMEMBER ME) ---
@@ -45,41 +54,44 @@ if (!isset($_SESSION['valselt_user_id']) && isset($_COOKIE['remember_token'])) {
 }
 
 // --- MINIO ---
-$minio_endpoint = 'https://cdn.ivanaldorino.web.id/';
-$minio_key      = 'admin';
-$minio_secret   = 'aldorino04';
-$minio_bucket   = 'valselt'; 
+$minio_bucket = $_ENV['MINIO_BUCKET']; 
 
 try {
     $s3 = new S3Client([
-        'version' => 'latest', 'region' => 'us-east-1', 'endpoint' => $minio_endpoint,
+        'version' => 'latest', 
+        'region'  => $_ENV['MINIO_REGION'], 
+        'endpoint' => $_ENV['MINIO_ENDPOINT'],
         'use_path_style_endpoint' => true,
-        'credentials' => ['key' => $minio_key, 'secret' => $minio_secret],
+        'credentials' => [
+            'key'    => $_ENV['MINIO_KEY'], 
+            'secret' => $_ENV['MINIO_SECRET']
+        ],
     ]);
 } catch (Exception $e) { die("Gagal MinIO: " . $e->getMessage()); }
 
+// --- GOOGLE ---
 $google_client = new GoogleClient();
-$google_client->setClientId('627951571756-lrp1sdd41nbbi6sf0snvkcs4e6v8c43g.apps.googleusercontent.com');
-$google_client->setClientSecret('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');
-// Ganti URL dibawah sesuai domain/IP CasaOS Anda
-$google_client->setRedirectUri('https://valseltid.ivanaldorino.web.id/google_auth.php'); 
+$google_client->setClientId($_ENV['GOOGLE_CLIENT_ID']);
+$google_client->setClientSecret($_ENV['GOOGLE_CLIENT_SECRET']);
+$google_client->setRedirectUri($_ENV['GOOGLE_REDIRECT_URI']); 
 $google_client->addScope('email');
 $google_client->addScope('profile');
 
-// KONFIGURASI GITHUB
-$github_client_id     = 'Ov23liVDnXwsY5RD1mkl';
-$github_client_secret = 'c710251fa6fb6208bc5910a35a85edf2534846d2';
-$github_redirect_uri  = 'https://valseltid.ivanaldorino.web.id/auth_github.php';
+// --- GITHUB ---
+$github_client_id     = $_ENV['GITHUB_CLIENT_ID'];
+$github_client_secret = $_ENV['GITHUB_CLIENT_SECRET'];
+$github_redirect_uri  = $_ENV['GITHUB_REDIRECT_URI'];
 
 // --- CREDENTIALS LAIN ---
-$recaptcha_site_key   = '6LdEEyMsAAAAAPK75it3V-_wxwWESVqQebrdNzKF'; 
-$recaptcha_secret_key = '6LdEEyMsAAAAADK5A1RXPIHpHTi2lwx5CdnORfwB';
+$recaptcha_site_key   = $_ENV['RECAPTCHA_SITE_KEY']; 
+$recaptcha_secret_key = $_ENV['RECAPTCHA_SECRET_KEY'];
 
-$mail_host = 'smtp.gmail.com';
-$mail_port = 587; 
-$mail_user = 'valseltalt@gmail.com'; 
-$mail_pass = 'cryw pkpa chai pefm';  
-$mail_from_name = 'Valselt ID Security';
+// --- SMTP MAIL ---
+$mail_host      = $_ENV['MAIL_HOST'];
+$mail_port      = $_ENV['MAIL_PORT']; 
+$mail_user      = $_ENV['MAIL_USER']; 
+$mail_pass      = $_ENV['MAIL_PASS'];  
+$mail_from_name = $_ENV['MAIL_FROM_NAME'];
 
 function sendOTPEmail($toEmail, $otp) {
     // Tambahkan $conn ke global agar bisa insert log

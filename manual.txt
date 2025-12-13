@@ -1,3 +1,11 @@
+# Ubah kepemilikan folder vendor dan file .env ke user www-data (biasanya ID 33)
+sudo chown -R 33:33 vendor/
+sudo chown 33:33 .env
+sudo chown 33:33 config.php
+
+# Berikan hak akses baca
+sudo chmod -R 755 vendor/
+sudo chmod 644 .env
 
 docker compose up -d --build
 docker exec -it valselt_id_app composer require aws/aws-sdk-php phpmailer/phpmailer google/apiclient lbuchs/webauthn vlucas/phpdotenv
