@@ -349,6 +349,25 @@ if (isset($_POST['delete_passkey'])) {
     header("Location: index.php"); exit();
 }
 
+// --- LOGIC REVOKE APP ACCESS ---
+if (isset($_POST['revoke_app_id'])) {
+    $app_id = intval($_POST['revoke_app_id']);
+    
+    // Pastikan app milik user yang login
+    $stmt = $conn->prepare("DELETE FROM authorized_apps WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $app_id, $user_id);
+    
+    if ($stmt->execute()) {
+        logActivity($conn, $user_id, "Mencabut akses aplikasi (Revoke Access)");
+        $_SESSION['popup_status'] = 'success';
+        $_SESSION['popup_message'] = 'Akses aplikasi berhasil dicabut.';
+    } else {
+        $_SESSION['popup_status'] = 'error';
+        $_SESSION['popup_message'] = 'Gagal mencabut akses.';
+    }
+    header("Location: index.php"); exit();
+}
+
 // --- HAPUS AKUN ---
 if (isset($_POST['delete_account'])) {
     // LOG SEBELUM MENGHAPUS
@@ -836,6 +855,86 @@ if (isset($_POST['send_logs_email'])) {
                                 </div>
                             </div>
                         <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
+            <div id="accordionContainer" class="accordionContainer">
+                <div class="accordion-header" id="acc3-header" onclick="toggleAccordion('acc3-header')">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="bx bx-extension" style="font-size:1.5rem; color:var(--text-main);"></i>
+                        Third-party Connection
+                    </div>
+                    <i class='bx bx-chevron-right indicator'></i>
+                </div>
+                
+                <div class="accordion-content" id="acc3-content">
+                    
+                    <div class="accordion-content-inside">
+                        <div style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
+                            <div style="display:flex; flex-direction:row; align-items:center;">
+                                <i class='bx bx-sitemap' style="margin-right:10px; font-size:1.2rem;"></i>
+                                <div>
+                                    <h4>Linked Apps and Services</h4>
+                                    <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Applications authorized to access your account.</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="apps-list">
+                            <?php
+                            $q_apps = $conn->query("SELECT * FROM authorized_apps WHERE user_id='$user_id' ORDER BY last_accessed DESC");
+                            
+                            if ($q_apps && $q_apps->num_rows > 0):
+                                while($app = $q_apps->fetch_assoc()):
+                                    $appName = htmlspecialchars($app['app_name']);
+                                    $appDomain = htmlspecialchars($app['app_domain']);
+                                    $lastAccess = date('d M Y, H:i', strtotime($app['last_accessed']));
+                                    
+                                    // --- LOGIKA FAVICON OTOMATIS (GOOGLE S2) ---
+                                    $directFavicon = "https://" . $appDomain . "/favicon.ico?v=" . time();
+                                    $backupFavicon = "https://www.google.com/s2/favicons?domain=" . $appDomain . "&sz=64";
+                            ?>
+                                
+                                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
+                                    <div style="display:flex; align-items:center;">
+                                        
+                                        <div style="width:40px; height:40px; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; display:flex; align-items:center; justify-content:center; margin-right:15px; overflow:hidden;">
+                                            <img src="<?php echo $directFavicon; ?>" 
+                                                 alt="Icon" 
+                                                 style="width:24px; height:24px; object-fit:contain;"
+                                                 onerror="this.onerror=null; this.src='<?php echo $backupFavicon; ?>';">
+                                        </div>
+                                        
+                                        <div>
+                                            <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);">
+                                                <?php echo $appName; ?>
+                                            </div>
+                                            <div style="font-size:0.75rem; color:var(--text-muted);">
+                                                <?php echo $appDomain; ?>
+                                            </div>
+                                            <div style="font-size:0.7rem; color:#9ca3af; margin-top:2px;">
+                                                Last used: <?php echo $lastAccess; ?>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <form method="POST" onsubmit="return confirm('Revoke access for <?php echo $appName; ?>? You will need to login again next time.');">
+                                        <input type="hidden" name="revoke_app_id" value="<?php echo $app['id']; ?>">
+                                        <button type="submit" class="btn" style="width:auto; padding: 6px 12px; font-size:0.8rem; background:white; border:1px solid #d1d5db; color:var(--text-muted); cursor:pointer;">
+                                            Revoke
+                                        </button>
+                                    </form>
+                                </div>
+
+                            <?php endwhile; else: ?>
+                                <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
+                                    <i class='bx bx-cube' style="font-size: 2rem; display:block; margin-bottom:10px; opacity:0.5;"></i>
+                                    You haven't connected any apps to Valselt ID yet.
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        
                     </div>
                 </div>
             </div>

@@ -157,18 +157,4 @@ function executeLogin($user, $redirect_to, $conn, $method) {
     processSSORedirect($conn, $user['id'], $redirect_to);
 }
 
-// Helper Function SSO (Biarkan tetap sama)
-function processSSORedirect($conn, $uid, $target) {
-    if (!empty($target)) {
-        $parsed_url = parse_url($target);
-        $app_name = isset($parsed_url['host']) ? $parsed_url['host'] : $target;
-        logActivity($conn, $uid, "Akun digunakan untuk Akses Aplikasi Pihak Ketiga: " . $app_name);
-        $token = bin2hex(random_bytes(32));
-        $conn->query("UPDATE users SET auth_token='$token' WHERE id='$uid'");
-        header("Location: " . $target . "?token=" . $token);
-    } else {
-        header("Location: index.php");
-    }
-    exit();
-}
 ?>

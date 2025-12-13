@@ -597,4 +597,49 @@ function checkTrustedDevice($conn, $uid) {
     
     return false; // Token salah/kadaluarsa/device lain
 }
+
+// FUNGSI UNTUK MENCATAT & REDIRECT SSO
+function processSSORedirect($conn, $uid, $target) {
+    if (!empty($target)) {
+        // 1. Ambil Nama Domain/App dari URL Target
+        $parsed = parse_url($target);
+        $host = isset($parsed['host']) ? $parsed['host'] : $target;
+        
+        // Bersihkan www. atau subdomain jika perlu, atau ambil nama simpel
+        // Contoh sederhana: Ambil kata pertama sebelum titik (spencal.web.id -> spencal)
+        $parts = explode('.', $host);
+        $appName = ucfirst($parts[0]); // Spencal
+        if($appName == 'Www') $appName = ucfirst($parts[1]); // Jika ada www
+
+        // 2. Catat ke Database (Insert atau Update waktu akses)
+        // Cek dulu apakah sudah ada
+        $check = $conn->prepare("SELECT id FROM authorized_apps WHERE user_id = ? AND app_domain = ?");
+        $check->bind_param("is", $uid, $host);
+        $check->execute();
+        $res = $check->get_result();
+
+        if ($res->num_rows > 0) {
+            // Update Last Accessed
+            $stmt = $conn->prepare("UPDATE authorized_apps SET last_accessed = NOW() WHERE user_id = ? AND app_domain = ?");
+            $stmt->bind_param("is", $uid, $host);
+            $stmt->execute();
+        } else {
+            // Insert Baru
+            $stmt = $conn->prepare("INSERT INTO authorized_apps (user_id, app_domain, app_name, last_accessed) VALUES (?, ?, ?, NOW())");
+            $stmt->bind_param("iss", $uid, $host, $appName);
+            $stmt->execute();
+        }
+
+        // 3. Log Aktivitas
+        logActivity($conn, $uid, "Login SSO ke Aplikasi: " . $appName . " (" . $host . ")");
+
+        // 4. Generate Token & Redirect
+        $token = bin2hex(random_bytes(32));
+        $conn->query("UPDATE users SET auth_token='$token' WHERE id='$uid'");
+        header("Location: " . $target . "?token=" . $token);
+    } else {
+        header("Location: index.php");
+    }
+    exit();
+}
 ?>
