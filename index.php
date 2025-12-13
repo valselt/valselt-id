@@ -9,7 +9,7 @@ $user_id = $_SESSION['valselt_user_id'];
 $u_res = $conn->query("SELECT * FROM users WHERE id='$user_id'");
 $user_data = $u_res->fetch_assoc();
 
-// --- AJAX HANDLER UNTUK GANTI PASSWORD ---
+// --- AJAX HANDLER ---
 if (isset($_POST['ajax_action'])) {
     header('Content-Type: application/json');
     $uid = $_SESSION['valselt_user_id'];
@@ -103,6 +103,28 @@ if (isset($_POST['ajax_action'])) {
             echo json_encode(['status' => 'success']);
         } else {
             echo json_encode(['status' => 'error', 'message' => 'Incorrect Code!']);
+        }
+        exit();
+    }
+
+    elseif ($_POST['ajax_action'] == 'verify_2fa_general') {
+        $code = $_POST['otp_code'];
+        
+        // Ambil secret dari DB
+        $q = $conn->query("SELECT two_factor_secret FROM users WHERE id='$uid'");
+        $u = $q->fetch_assoc();
+        
+        if (empty($u['two_factor_secret'])) {
+            // Jika user ternyata tidak punya 2FA (bypass logic error)
+            echo json_encode(['status' => 'success']); 
+            exit();
+        }
+
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+        if ($google2fa->verifyKey($u['two_factor_secret'], $code)) {
+            echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Kode salah!']);
         }
         exit();
     }
@@ -504,29 +526,46 @@ if (isset($_POST['send_logs_email'])) {
 
                         <?php
                         $current_session = session_id();
-                        $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY (session_id = '$current_session') DESC, last_login DESC");
+                        $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY is_active DESC, last_login DESC");
                         
                         if ($q_dev->num_rows > 0):
                             while($dev = $q_dev->fetch_assoc()):
-                                $is_current = ($dev['session_id'] == $current_session);
+                                $is_this_session = ($dev['session_id'] == $current_session);
+                                $isActive = $dev['is_active']; // 1 = Login, 0 = Logout
                                 
-                                // Icon Device
-                                $icon = 'bx-laptop'; 
-                                if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) { $icon = 'bx-mobile'; }
+                                // Icon Type
+                                $iconClass = 'bx-laptop'; 
+                                if (stripos($dev['device_name'], 'Android') !== false || stripos($dev['device_name'], 'iPhone') !== false) { 
+                                    $iconClass = 'bx-mobile'; 
+                                }
+
+                                // Style Logika
+                                if ($isActive) {
+                                    // AKTIF: Hijau Gelap (#166534), Ikon Putih (#ffffff)
+                                    $bgStyle = "background:#166534; color:#ffffff;";
+                                    $statusText = '<span style="color:#166534; font-weight:600; font-size:0.75rem; margin-left:8px;">● Active Now</span>';
+                                } else {
+                                    // LOGOUT: Abu-abu (Default lama)
+                                    $bgStyle = "background:#f3f4f6; color:var(--primary);";
+                                    $statusText = '<span style="color:#9ca3af; font-size:0.75rem; margin-left:8px;">Signed out</span>';
+                                }
                                 
-                                // Format Lokasi (Jika kosong, tampilkan Unknown)
                                 $loc_display = !empty($dev['location']) ? htmlspecialchars($dev['location']) : 'Unknown Location';
                         ?>
                         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
                             <div style="display:flex; align-items:center;">
-                                <div style="width:40px; height:40px; background:#f3f4f6; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:var(--primary);">
-                                    <i class='bx <?php echo $icon; ?>' style="font-size:1.2rem;"></i>
+                                <div style="width:40px; height:40px; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; <?php echo $bgStyle; ?>">
+                                    <i class='bx <?php echo $iconClass; ?>' style="font-size:1.2rem;"></i>
                                 </div>
+                                
                                 <div>
                                     <div style="font-weight:600; font-size:0.95rem; color:var(--text-main); display: flex; align-items: center;">
                                         <?php echo htmlspecialchars($dev['device_name']); ?>
-                                        <?php if($is_current): ?>
+                                        
+                                        <?php if($is_this_session): ?>
                                             <span style="background:#dcfce7; color:#166534; font-size:0.7rem; padding:2px 8px; border-radius:10px; margin-left:8px; border: 1px solid #bbf7d0;">This Device</span>
+                                        <?php else: ?>
+                                            <?php echo $statusText; ?>
                                         <?php endif; ?>
                                     </div>
                                     
@@ -694,7 +733,7 @@ if (isset($_POST['send_logs_email'])) {
                                     </div>
                                     <div>
                                         <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);"><?php echo $sourceRaw; ?></div>
-                                        <div style="font-size:0.8rem; color:var(--text-muted);">Dibuat: <?php echo $pk_date; ?></div>
+                                        <div style="font-size:0.8rem; color:var(--text-muted);">Created on: <?php echo $pk_date; ?></div>
                                     </div>
                                 </div>
                                 <button type="button" onclick="openDeletePasskey('<?php echo $pk['id']; ?>')" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Passkey">
@@ -792,13 +831,9 @@ if (isset($_POST['send_logs_email'])) {
                                         <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);">
                                             <?php echo htmlspecialchars($authNameRaw); ?>
                                         </div>
-                                        <div style="font-size:0.8rem; color:var(--text-muted);">Status: Aktif</div>
+                                        <div style="font-size:0.8rem; color:var(--text-muted);">Status: Active</div>
                                     </div>
                                 </div>
-                                
-                                <button type="button" onclick="disable2FA()" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Authenticator">
-                                    <i class='bx bx-trash' style="font-size:1.2rem;"></i>
-                                </button>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -843,7 +878,7 @@ if (isset($_POST['send_logs_email'])) {
                         </div>
                     </div>
 
-                    <button type="button" onclick="openDeleteModal()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
+                    <button type="button" onclick="checkSecurityAndExecute(openDeleteModal)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
                         <i class='bx bx-trash' style="font-size: 1.2rem;"></i>
                     </button>
                 </div>
@@ -856,7 +891,7 @@ if (isset($_POST['send_logs_email'])) {
                         </div>
                     </div>
 
-                    <button type="button" onclick="openVerifyPassModal()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
+                    <button type="button" onclick="checkSecurityAndExecute(openVerifyPassModal)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#e53e3e; color:white; border:none; transition:0.2s;">
                         <i class='bx bx-key' style="font-size: 1.2rem;"></i>
                     </button>
                 </div>
@@ -869,7 +904,7 @@ if (isset($_POST['send_logs_email'])) {
 
         <div style="text-align:center; margin-top: 40px;">
             <a href="logout.php" class="btn btn-logout" style="display:inline-flex; align-items:center; justify-content: center; gap:8px; text-decoration:none; padding:12px 30px; border-radius:50px; font-weight:600;">
-                <i class='bx bx-log-out'></i> Keluar / Logout
+                <i class='bx bx-log-out'></i> Logout
             </a>
         </div>
     </div>
@@ -877,16 +912,16 @@ if (isset($_POST['send_logs_email'])) {
 
 <div class="popup-overlay" id="cropModal" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box" style="width: 500px; max-width: 95%;">
-        <h3 class="popup-title">Sesuaikan Foto</h3>
-        <p class="popup-message" style="margin-bottom:15px;">Geser dan zoom area yang ingin diambil.</p>
+        <h3 class="popup-title">Adjust Photo</h3>
+        <p class="popup-message" style="margin-bottom:15px;">Drag and zoom the area you want to capture.</p>
         
         <div class="crop-container">
             <img id="image-to-crop" style="max-width: 100%; display: block;">
         </div>
 
         <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="button" onclick="closeModal('cropModal')" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
-            <button type="button" onclick="cropImage()" class="popup-btn success">Simpan</button>
+            <button type="button" onclick="closeModal('cropModal')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
+            <button type="button" onclick="cropImage()" class="popup-btn success">Save</button>
         </div>
     </div>
 </div>
@@ -897,14 +932,14 @@ if (isset($_POST['send_logs_email'])) {
             <i class='bx bx-trash'></i>
         </div>
         
-        <h3 class="popup-title">Hapus Akun?</h3>
-        <p class="popup-message">Apakah Anda yakin? Akun yang dihapus tidak dapat dikembalikan lagi selamanya.</p>
+        <h3 class="popup-title">Delete Account?</h3>
+        <p class="popup-message">Are you sure? This action is permanent and cannot be undone.</p>
         
         <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="button" onclick="closeModal('deleteModal')" class="popup-btn">Batal</button>
+            <button type="button" onclick="closeModal('deleteModal')" class="popup-btn">Cancel</button>
             
             <form method="POST" style="width:100%;">
-                <button type="submit" name="delete_account" class="popup-btn error">Ya, Hapus</button>
+                <button type="submit" name="delete_account" class="popup-btn error">Yes, Delete Permanently</button>
             </form>
         </div>
     </div>
@@ -954,8 +989,8 @@ if (isset($_POST['send_logs_email'])) {
 <div class="popup-overlay" id="modalAuthName" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box success"><i class='bx bx-edit'></i></div>
-        <h3 class="popup-title">Give a Name</h3>
-        <p class="popup-message">Give a name to this authenticator (e.g., Samsung Phone).</p>
+        <h3 class="popup-title">Authenticator Name</h3>
+        <p class="popup-message">Give a name to this authenticator (e.g., Google Authenticator, Proton Authenticator, etc).</p>
         
         <input type="text" id="auth_name_input" class="form-control" placeholder="Authenticator Name" style="margin-bottom:15px; text-align:center;">
         
@@ -987,16 +1022,16 @@ if (isset($_POST['send_logs_email'])) {
 <div class="popup-overlay" id="modalVerifyPass" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box warning"><i class='bx bx-lock-alt'></i></div>
-        <h3 class="popup-title">Verifikasi</h3>
-        <p class="popup-message">Masukkan password lama Anda untuk melanjutkan.</p>
+        <h3 class="popup-title">Verification</h3>
+        <p class="popup-message">Enter your current password to continue.</p>
         
-        <input type="password" id="old_password_input" class="form-control" placeholder="Password Lama" style="margin-bottom:15px; text-align:center;">
+        <input type="password" id="old_password_input" class="form-control" placeholder="Current Password" style="margin-bottom:15px; text-align:center;">
         <p id="error_msg_pass" style="color:red; font-size:0.85rem; display:none; margin-bottom:10px;"></p>
 
-        <button onclick="checkOldPassword()" class="popup-btn warning" id="btnCheckPass">Lanjutkan</button>
+        <button onclick="checkOldPassword()" class="popup-btn warning" id="btnCheckPass">Continue</button>
         
         <div style="margin-top:15px; font-size:0.9rem; color:var(--text-muted);">
-            Lupa password? <a href="#" onclick="switchToOTP()" style="color:var(--primary); font-weight:600;">Gunakan OTP Email</a>
+            Forgot password? <a href="#" onclick="switchToOTP()" style="color:var(--primary); font-weight:600;">Use Email OTP</a>
         </div>
         <button onclick="closeModal('modalVerifyPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
     </div>
@@ -1008,15 +1043,15 @@ if (isset($_POST['send_logs_email'])) {
             <i class='bx bx-trash'></i>
         </div>
         
-        <h3 class="popup-title">Hapus Passkey?</h3>
-        <p class="popup-message">Anda tidak akan bisa login menggunakan metode ini lagi di perangkat terkait.</p>
+        <h3 class="popup-title">Delete Passkey?</h3>
+        <p class="popup-message">You will no longer be able to log in using this method on the associated device.</p>
         
         <div style="display:flex; gap:10px; margin-top:20px;">
-            <button type="button" onclick="closeModal('modalDeletePasskey')" class="popup-btn">Batal</button>
+            <button type="button" onclick="closeModal('modalDeletePasskey')" class="popup-btn">Cancel</button>
             
             <form method="POST" style="width:100%;">
                 <input type="hidden" name="pk_id" id="delete_pk_id_target">
-                <button type="submit" name="delete_passkey" class="popup-btn error">Ya, Hapus</button>
+                <button type="submit" name="delete_passkey" class="popup-btn error">Yes, Delete Passkey</button>
             </form>
         </div>
     </div>
@@ -1025,57 +1060,57 @@ if (isset($_POST['send_logs_email'])) {
 <div class="popup-overlay" id="modalPasskeyName" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box success"><i class='bx bx-fingerprint'></i></div>
-        <h3 class="popup-title">Beri Nama Passkey</h3>
-        <p class="popup-message">Passkey berhasil dibuat! Beri nama agar mudah dikenali (Contoh: Proton Pass, Yubikey).</p>
+        <h3 class="popup-title">Name Your Passkey</h3>
+        <p class="popup-message">Your passkey has been created! Give it a name so it’s easy to recognize (e.g., Google Password Manager, Proton Pass, YubiKey).</p>
         
-        <input type="text" id="passkey_name_input" class="form-control" placeholder="Nama Passkey (Opsional)" style="margin-bottom:15px; text-align:center;">
+        <input type="text" id="passkey_name_input" class="form-control" placeholder="Passkey Name (Optional)" style="margin-bottom:15px; text-align:center;">
         
-        <button onclick="submitPasskeyData()" class="popup-btn success">Simpan</button>
-        <button onclick="closeModal('modalPasskeyName')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
+        <button onclick="submitPasskeyData()" class="popup-btn success">Save</button>
+        <button onclick="closeModal('modalPasskeyName')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Cancel</button>
     </div>
 </div>
 
 <div class="popup-overlay" id="modalVerifyOTP" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box warning"><i class='bx bx-envelope'></i></div>
-        <h3 class="popup-title">Kode OTP</h3>
-        <p class="popup-message">Kami telah mengirim kode ke email Anda.</p>
+        <h3 class="popup-title">OTP Code</h3>
+        <p class="popup-message">We have sent a code to your email.</p>
         
         <input type="text" id="otp_input" class="form-control" placeholder="000000" style="margin-bottom:15px; text-align:center; letter-spacing:5px; font-size:1.2rem;">
         <p id="error_msg_otp" style="color:red; font-size:0.85rem; display:none; margin-bottom:10px;"></p>
 
-        <button onclick="checkOTP()" class="popup-btn warning" id="btnCheckOTP">Verifikasi OTP</button>
+        <button onclick="checkOTP()" class="popup-btn warning" id="btnCheckOTP">Verify OTP</button>
         
         <div style="margin-top:15px; font-size:0.9rem; color:var(--text-muted);">
-            Tidak menerima kode? 
-            <span id="timer_display" style="color:var(--text-muted);">Kirim ulang dalam 60s</span>
-            <a href="#" id="btn_resend" onclick="resendOTP()" style="display:none; color:var(--primary); font-weight:600;">Kirim Ulang</a>
+            Didn't receive the code? 
+            <span id="timer_display" style="color:var(--text-muted);">Resend in 60s</span>
+            <a href="#" id="btn_resend" onclick="resendOTP()" style="display:none; color:var(--primary); font-weight:600;">Resend</a>
         </div>
-        <button onclick="closeModal('modalVerifyOTP')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
+        <button onclick="closeModal('modalVerifyOTP')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Cancel</button>
     </div>
 </div>
 
 <div class="popup-overlay" id="modalNewPass" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box success"><i class='bx bx-key'></i></div>
-        <h3 class="popup-title">Password Baru</h3>
-        <p class="popup-message">Silakan buat password baru Anda.</p>
+        <h3 class="popup-title">New Password</h3>
+        <p class="popup-message">Please create your new password.</p>
         
         <form method="POST">
-            <input type="password" id="new_password_input" name="new_password" class="form-control" placeholder="Password Baru" required style="margin-bottom:10px; text-align:center;">
+            <input type="password" id="new_password_input" name="new_password" class="form-control" placeholder="New Password" required style="margin-bottom:10px; text-align:center;">
             
             <div class="password-requirements" id="pwd-req-box-modal" style="text-align:left; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; margin-bottom:15px; font-size:0.85rem;">
 
-                <div class="req-item invalid" id="req-len" style="margin-bottom:2px;"><i class='bx bx-x'></i> 6+ Karakter</div>
-                <div class="req-item invalid" id="req-upper" style="margin-bottom:2px;"><i class='bx bx-x'></i> Huruf Besar (A-Z)</div>
-                <div class="req-item invalid" id="req-num" style="margin-bottom:2px;"><i class='bx bx-x'></i> Angka (0-9)</div>
-                <div class="req-item invalid" id="req-sym" style="margin-bottom:2px;"><i class='bx bx-x'></i> Simbol (!@#$)</div>
+                <div class="req-item invalid" id="req-len" style="margin-bottom:2px;"><i class='bx bx-x'></i> 6+ Characters</div>
+                <div class="req-item invalid" id="req-upper" style="margin-bottom:2px;"><i class='bx bx-x'></i> Uppercase Letters (A-Z)</div>
+                <div class="req-item invalid" id="req-num" style="margin-bottom:2px;"><i class='bx bx-x'></i> Numbers (0-9)</div>
+                <div class="req-item invalid" id="req-sym" style="margin-bottom:2px;"><i class='bx bx-x'></i> Symbols (!@#$)</div>
 
             </div>
 
-            <button type="submit" id="btnSavePass" name="save_new_password" class="popup-btn success" disabled style="opacity:0.6; cursor:not-allowed;">Simpan Password</button>
+            <button type="submit" id="btnSavePass" name="save_new_password" class="popup-btn success" disabled style="opacity:0.6; cursor:not-allowed;">Save Password</button>
         </form>
-        <button onclick="closeModal('modalNewPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Batal</button>
+        <button onclick="closeModal('modalNewPass')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer; margin-top:10px;">Cancel</button>
     </div>
 </div>
 
@@ -1084,10 +1119,10 @@ if (isset($_POST['send_logs_email'])) {
         <div class="popup-icon-box error">
             <i class='bx bx-error-circle'></i>
         </div>
-        <h3 class="popup-title">Perhatian</h3>
-        <p class="popup-message" id="generic_error_text">Terjadi kesalahan.</p>
+        <h3 class="popup-title">Attention</h3>
+        <p class="popup-message" id="generic_error_text">An error occurred.</p>
         
-        <button onclick="closeModal('modalGenericError')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer;">Tutup</button>
+        <button onclick="closeModal('modalGenericError')" class="popup-btn" style="background:#f3f4f6; color:#111; cursor:pointer;">Close</button>
     </div>
 </div>
 
@@ -1095,8 +1130,8 @@ if (isset($_POST['send_logs_email'])) {
     <div class="popup-box" style="width: 600px; max-width: 95%;">
         
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
-            <div style="display:flex; align-items:center;">
-                <h3 class="popup-title" style="margin:0;"><i class='bx bx-history'></i> Aktivitas</h3>
+            <div style="display:flex; align-items:center; justify-content:center; gap:10px;">
+                <h3 class="popup-title" style="margin:0;"><i class='bx bx-history'></i> Account Logs</h3>
             </div>
 
             <form method="GET" style="margin:0;">
@@ -1105,9 +1140,9 @@ if (isset($_POST['send_logs_email'])) {
                     // Ambil nilai limit dari URL, default 50
                     $curr_limit = isset($_GET['logs_limit']) ? $_GET['logs_limit'] : '50'; 
                     ?>
-                    <option value="50" <?php if($curr_limit == '50') echo 'selected'; ?>>50 Terakhir</option>
-                    <option value="100" <?php if($curr_limit == '100') echo 'selected'; ?>>100 Terakhir</option>
-                    <option value="all" <?php if($curr_limit == 'all') echo 'selected'; ?>>Tampilkan Semua</option>
+                    <option value="50" <?php if($curr_limit == '50') echo 'selected'; ?>>Last 50</option>
+                    <option value="100" <?php if($curr_limit == '100') echo 'selected'; ?>>Last 100</option>
+                    <option value="all" <?php if($curr_limit == 'all') echo 'selected'; ?>>Show All</option>
                 </select>
             </form>
         </div>
@@ -1117,8 +1152,8 @@ if (isset($_POST['send_logs_email'])) {
                 
                 <thead style="position: sticky; top: 0; background: white; z-index: 1;">
                     <tr>
-                        <th style="padding: 5px 10px; text-align: center; color:var(--text-muted); font-weight:500; font-size:0.8rem; width: 30%;">Waktu</th>
-                        <th style="padding: 5px 10px; text-align: center; color:var(--text-muted); font-weight:500; font-size:0.8rem;">Aktivitas</th>
+                        <th style="padding: 5px 10px; text-align: center; color:var(--text-muted); font-weight:500; font-size:0.8rem; width: 30%;">Time</th>
+                        <th style="padding: 5px 10px; text-align: center; color:var(--text-muted); font-weight:500; font-size:0.8rem;">Activity</th>
                     </tr>
                 </thead>
                 
@@ -1165,15 +1200,34 @@ if (isset($_POST['send_logs_email'])) {
             <form method="POST" style="flex: 1;" id="csvForm">
                 <button type="button" onclick="submitCSVForm()" id="btnSendCSV" class="popup-btn" style="background:#000; color:white; border:none; display:flex; align-items:center; justify-content: center; gap:8px; width: 100%;">
                     <i class='bx bx-envelope'></i> 
-                    <span id="csvButtonText">Kirim CSV</span>
+                    <span id="csvButtonText">Export CSV to Email</span>
                     <i class='bx bx-loader-alt bx-spin' id="csvLoadingIcon" style="display:none; font-size:1.2rem;"></i>
                 </button>
                 <input type="hidden" name="send_logs_email" value="1">
             </form>
             
             <button onclick="closeModal('modalLogs')" class="popup-btn" style="flex: 1; background:#f3f4f6; color:#111; border: 1px solid #e5e7eb;">
-                Tutup
+                Close
             </button>
+        </div>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalVerify2FAAction" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box warning"><i class='bx bx-shield-quarter'></i></div>
+        <h3 class="popup-title">Authentication Verification</h3>
+        <p class="popup-message">For security reasons, an additional verification is required because an authenticator is enabled on your account. Please enter the verification code to continue.</p>
+        
+        <input type="text" id="2fa_action_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:1.2rem; margin-bottom:10px;" maxlength="6">
+        
+        <p id="action_2fa_error" style="color:#ef4444; font-size:0.85rem; margin-bottom:15px; display:none; font-weight:500;">
+            Kode salah!
+        </p>
+
+        <div style="display:flex; gap:10px;">
+            <button onclick="closeModal('modalVerify2FAAction')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
+            <button onclick="submit2FAAction()" class="popup-btn warning" id="btnAction2FA">Verify</button>
         </div>
     </div>
 </div>
@@ -1181,6 +1235,9 @@ if (isset($_POST['send_logs_email'])) {
 <script src="webauthn.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.js"></script>
 <script>
+    const is2FAEnabled = <?php echo $user_data['is_2fa_enabled'] ? 'true' : 'false'; ?>;
+    let pendingAction = null;
+
     let cropper;
     const fileInput = document.getElementById('hidden-file-input');
     const imageToCrop = document.getElementById('image-to-crop');
@@ -1306,7 +1363,7 @@ if (isset($_POST['send_logs_email'])) {
 
         if(!pass) return;
 
-        btn.innerText = "Memeriksa..."; btn.disabled = true;
+        btn.innerText = "Checking..."; btn.disabled = true;
         
         const formData = new FormData();
         formData.append('ajax_action', 'verify_old_password');
@@ -1666,7 +1723,7 @@ if (isset($_POST['send_logs_email'])) {
             return; 
         }
         
-        btn.innerText = "Memeriksa..."; btn.disabled = true;
+        btn.innerText = "Checking..."; btn.disabled = true;
 
         const formData = new FormData();
         formData.append('ajax_action', 'verify_2fa_temp');
@@ -1767,6 +1824,60 @@ if (isset($_POST['send_logs_email'])) {
                 
                 btn.innerText = "Matikan"; btn.disabled = false;
                 codeInput.value = ""; // Kosongkan input biar user bisa ketik ulang
+                codeInput.focus();
+            }
+        });
+    }
+
+    function checkSecurityAndExecute(actionCallback) {
+        if (is2FAEnabled) {
+            // Jika 2FA aktif, tahan aksi dan buka modal verifikasi
+            pendingAction = actionCallback;
+            document.getElementById('2fa_action_input').value = "";
+            document.getElementById('action_2fa_error').style.display = 'none';
+            openModal('modalVerify2FAAction');
+        } else {
+            // Jika tidak aktif, langsung jalankan aksi (buka modal hapus/ganti pass)
+            actionCallback();
+        }
+    }
+
+    function submit2FAAction() {
+        const codeInput = document.getElementById('2fa_action_input');
+        const code = codeInput.value;
+        const btn = document.getElementById('btnAction2FA');
+        const errorMsg = document.getElementById('action_2fa_error');
+
+        errorMsg.style.display = 'none';
+
+        if(code.length < 6) {
+            errorMsg.innerText = "Masukkan 6 digit kode.";
+            errorMsg.style.display = 'block';
+            return;
+        }
+
+        btn.innerText = "Checking..."; btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'verify_2fa_general');
+        formData.append('otp_code', code);
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            btn.innerText = "Verifikasi"; btn.disabled = false;
+            
+            if(data.status === 'success') {
+                closeModal('modalVerify2FAAction');
+                // Jalankan aksi yang tertunda tadi
+                if (typeof pendingAction === 'function') {
+                    pendingAction();
+                    pendingAction = null; // Reset
+                }
+            } else {
+                errorMsg.innerText = data.message;
+                errorMsg.style.display = 'block';
+                codeInput.value = "";
                 codeInput.focus();
             }
         });

@@ -6,8 +6,8 @@ require 'config.php'; // Load config untuk koneksi DB
 $current_session_id = session_id();
 
 if (!empty($current_session_id)) {
-    // Hapus data device yang sesuai dengan session_id ini
-    $stmt = $conn->prepare("DELETE FROM user_devices WHERE session_id = ?");
+    // Jangan DELETE, tapi UPDATE is_active = 0
+    $stmt = $conn->prepare("UPDATE user_devices SET is_active = 0 WHERE session_id = ?");
     $stmt->bind_param("s", $current_session_id);
     $stmt->execute();
 }

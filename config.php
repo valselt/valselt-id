@@ -399,8 +399,8 @@ function logUserDevice($conn, $uid) {
     } else {
         // Insert data baru
         $conn->query("
-            INSERT INTO user_devices (user_id, device_name, ip_address, location, session_id, last_login)
-            VALUES ('$uid', '$device', '$ip', '$location', '$sess_id', NOW())
+            INSERT INTO user_devices (user_id, device_name, ip_address, location, session_id, last_login, is_active)
+            VALUES ('$uid', '$device', '$ip', '$location', '$sess_id', NOW(), 1)
         ");
     }
 }
