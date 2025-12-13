@@ -483,6 +483,47 @@ if (isset($_POST['download_my_data'])) {
     exit();
 }
 
+// --- LOGIC LOGOUT SEMUA PERANGKAT (KECUALI INI) ---
+if (isset($_POST['logout_all_devices'])) {
+    $current_sess = session_id();
+    
+    // Matikan semua device yang session_id-nya BUKAN session ini
+    $stmt = $conn->prepare("UPDATE user_devices SET is_active = 0 WHERE user_id = ? AND session_id != ?");
+    $stmt->bind_param("is", $user_id, $current_sess);
+    
+    if ($stmt->execute()) {
+        // Opsional: Hapus file session di server jika Anda menggunakan penyimpanan session default (bukan DB session handler)
+        // Tapi mengubah is_active = 0 sudah cukup untuk logika login kita.
+        
+        logActivity($conn, $user_id, "Melakukan Force Logout pada semua perangkat lain.");
+        $_SESSION['popup_status'] = 'success';
+        $_SESSION['popup_message'] = 'Semua perangkat lain berhasil dikeluarkan.';
+    } else {
+        $_SESSION['popup_status'] = 'error';
+        $_SESSION['popup_message'] = 'Gagal melakukan logout massal.';
+    }
+    header("Location: ./"); exit();
+}
+
+// --- LOGIC HAPUS RIWAYAT AKTIVITAS ---
+if (isset($_POST['clear_activity_logs'])) {
+    // Hapus semua log milik user ini
+    $stmt = $conn->prepare("DELETE FROM logsuser WHERE id_user = ?");
+    $stmt->bind_param("i", $user_id);
+    
+    if ($stmt->execute()) {
+        // Catat 1 log baru bahwa history baru saja dihapus (agar tidak kosong melompong mencurigakan)
+        logActivity($conn, $user_id, "Menghapus seluruh riwayat aktivitas sebelumnya.");
+        
+        $_SESSION['popup_status'] = 'success';
+        $_SESSION['popup_message'] = 'Riwayat aktivitas berhasil dihapus.';
+    } else {
+        $_SESSION['popup_status'] = 'error';
+        $_SESSION['popup_message'] = 'Gagal menghapus log.';
+    }
+    header("Location: ./"); exit();
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -613,7 +654,7 @@ if (isset($_POST['download_my_data'])) {
 
                         <?php
                         $current_session = session_id();
-                        $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY is_active DESC, last_login DESC");
+                        $q_dev = $conn->query("SELECT * FROM user_devices WHERE user_id='$user_id' ORDER BY (session_id = '$current_session') DESC, is_active DESC, last_login DESC");
                         
                         if ($q_dev->num_rows > 0):
                             while($dev = $q_dev->fetch_assoc()):
@@ -1045,6 +1086,39 @@ if (isset($_POST['download_my_data'])) {
                         </button>
                     </form>
                 </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight:600; color: #b45309;">Log Out All Other Devices</div>
+                        <div style="font-size:0.85rem; color: #ca8a04; opacity: 0.8; line-height: 1.5;">
+                            Secure your account by logging out of all active sessions except this one.
+                        </div>
+                    </div>
+                    
+                    <form method="POST" style="margin:0;" id="formLogoutOthers">
+                        <input type="hidden" name="logout_all_devices" value="1">
+                        
+                        <button type="button" onclick="checkSecurityAndExecute(openLogoutConfirmation)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s; border-radius:8px;" title="Force Logout Others">
+                            <i class='bx bx-log-out-circle' style="font-size: 1.2rem;"></i>
+                        </button>
+                    </form>
+                </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight:600; color: #b45309;">Clear Activity History</div>
+                        <div style="font-size:0.85rem; color: #ca8a04; opacity: 0.8; line-height: 1.5;">
+                            Permanently delete your account activity logs from our server.
+                        </div>
+                    </div>
+                    
+                    <form method="POST" style="margin:0;" id="formClearLogs">
+                        <input type="hidden" name="clear_activity_logs" value="1">
+                        <button type="button" onclick="checkSecurityAndExecute(submitClearLogsForm)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s; border-radius:8px;" title="Clear Logs">
+                            <i class='bx bx-trash-alt' style="font-size: 1.2rem;"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
 
             
@@ -1093,6 +1167,23 @@ if (isset($_POST['download_my_data'])) {
             <a href="logout" class="btn btn-logout" style="display:inline-flex; align-items:center; justify-content: center; gap:8px; text-decoration:none; padding:12px 30px; border-radius:50px; font-weight:600;">
                 <i class='bx bx-log-out'></i> Logout
             </a>
+        </div>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalConfirmLogout" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box warning">
+            <i class='bx bx-log-out-circle'></i>
+        </div>
+        
+        <h3 class="popup-title">Logout All Devices?</h3>
+        <p class="popup-message">Are you sure? This will sign out your account from all other devices immediately.</p>
+        
+        <div style="display:flex; gap:10px; margin-top:20px;">
+            <button type="button" onclick="closeModal('modalConfirmLogout')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
+            
+            <button type="button" onclick="submitLogoutForm()" class="popup-btn warning">Yes, Log Out All</button>
         </div>
     </div>
 </div>
@@ -2143,6 +2234,25 @@ if (isset($_POST['download_my_data'])) {
     function submitDownloadForm() {
         // Submit form secara program setelah lolos verifikasi 2FA
         document.getElementById('formDownloadData').submit();
+    }
+
+    // --- FUNGSI CALLBACK UNTUK HAPUS LOG ---
+    function submitClearLogsForm() {
+        document.getElementById('formClearLogs').submit();
+    }
+
+    // --- FUNGSI WRAPPER LOGOUT (CONFIRM + SECURITY CHECK) ---
+    function openLogoutConfirmation() {
+        openModal('modalConfirmLogout');
+    }
+
+    // --- 2. FUNGSI SUBMIT FORM (Dipanggil tombol YES di popup) ---
+    function submitLogoutForm() {
+        // Tutup modal dulu biar rapi (opsional, karena page akan reload)
+        closeModal('modalConfirmLogout'); 
+        
+        // Submit form
+        document.getElementById('formLogoutOthers').submit();
     }
 
 
