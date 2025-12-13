@@ -429,8 +429,59 @@ if (isset($_POST['send_logs_email'])) {
     }
     header("Location: ./"); exit();
 }
-// ...
 
+// --- LOGIC DOWNLOAD DATA PRIBADI (JSON) ---
+if (isset($_POST['download_my_data'])) {
+    // 1. Siapkan Struktur Data
+    $export = [
+        'generated_at' => date('Y-m-d H:i:s'),
+        'profile' => [
+            'username' => $user_data['username'],
+            'email' => $user_data['email'],
+            'joined_at' => $user_data['created_at'],
+            'verification_status' => (bool)$user_data['is_verified'],
+            '2fa_enabled' => (bool)$user_data['is_2fa_enabled']
+        ]
+    ];
+
+    // 2. Ambil Data Perangkat Aktif
+    $devs = [];
+    $q_d = $conn->query("SELECT device_name, ip_address, location, last_login, is_active FROM user_devices WHERE user_id='$user_id'");
+    while($d = $q_d->fetch_assoc()) { $devs[] = $d; }
+    $export['devices_history'] = $devs;
+
+    // 3. Ambil Data Aplikasi Terhubung (SSO)
+    $apps = [];
+    $q_a = $conn->query("SELECT app_name, app_domain, last_accessed FROM authorized_apps WHERE user_id='$user_id'");
+    while($a = $q_a->fetch_assoc()) { $apps[] = $a; }
+    $export['connected_apps'] = $apps;
+
+    // 4. Ambil Data Passkeys
+    $pks = [];
+    $q_p = $conn->query("SELECT credential_source, created_at FROM user_passkeys WHERE user_id='$user_id'");
+    while($p = $q_p->fetch_assoc()) { $pks[] = $p; }
+    $export['security_passkeys'] = $pks;
+
+    // 5. Ambil Log Aktivitas (100 Terakhir)
+    $logs = [];
+    $q_l = $conn->query("SELECT behaviour, created_at FROM logsuser WHERE id_user='$user_id' ORDER BY id DESC LIMIT 100");
+    while($l = $q_l->fetch_assoc()) { $logs[] = $l; }
+    $export['recent_activity_logs'] = $logs;
+
+    // 6. Output sebagai File JSON
+    $json_data = json_encode($export, JSON_PRETTY_PRINT);
+    $filename = 'valselt_data_archive_' . date('Ymd_His') . '.json';
+
+    // Log aktivitas download
+    logActivity($conn, $user_id, "Mengunduh Arsip Data Pribadi (JSON)");
+
+    // Force Download
+    header('Content-Type: application/json');
+    header('Content-Disposition: attachment; filename="' . $filename . '"');
+    header('Content-Length: ' . strlen($json_data));
+    echo $json_data;
+    exit();
+}
 
 ?>
 
@@ -964,6 +1015,7 @@ if (isset($_POST['send_logs_email'])) {
                 <i class='bx bx-show' style="font-size: 1.2rem; margin-right: 10px;"></i>
                 <h4 style="font-weight:600;">Privacy Zone</h4>
             </div>
+
             <div style="display:flex; flex-direction:column; gap:15px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
                     <div>
@@ -976,7 +1028,26 @@ if (isset($_POST['send_logs_email'])) {
                         <i class='bx bx-receipt' style="font-size: 1.2rem;"></i>
                     </button>
                 </div>
+
+                <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
+                    <div style="flex: 1;">
+                        <div style="font-weight:600; color: #b45309;">Download Personal Data</div>
+                        <div style="font-size:0.85rem; color: #ca8a04; opacity: 0.8; line-height: 1.5;">
+                            Get a copy of your data (Profile, Devices, Apps) in JSON format.
+                        </div>
+                    </div>
+                    
+                    <form method="POST" target="_blank" style="margin:0;" id="formDownloadData">
+                        <input type="hidden" name="download_my_data" value="1">
+                        
+                        <button type="button" onclick="checkSecurityAndExecute(submitDownloadForm)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s; border-radius:8px;" title="Download JSON Archive">
+                            <i class='bx bx-download' style="font-size: 1.2rem;"></i>
+                        </button>
+                    </form>
+                </div>
             </div>
+
+            
         </div>
 
         <div style="background: #fff5f5; padding: 25px; border-radius: 12px; border: 1px solid #fed7d7;">
@@ -1504,7 +1575,7 @@ if (isset($_POST['send_logs_email'])) {
         formData.append('ajax_action', 'verify_old_password');
         formData.append('old_password', pass);
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             btn.innerText = "Lanjutkan"; btn.disabled = false;
@@ -1528,7 +1599,7 @@ if (isset($_POST['send_logs_email'])) {
         const formData = new FormData();
         formData.append('ajax_action', 'send_otp_pass');
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             btn.innerText = "Lanjutkan"; btn.disabled = false;
@@ -1568,7 +1639,7 @@ if (isset($_POST['send_logs_email'])) {
         const formData = new FormData();
         formData.append('ajax_action', 'send_otp_pass');
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if(data.status === 'success') {
@@ -1636,7 +1707,7 @@ if (isset($_POST['send_logs_email'])) {
         formData.append('ajax_action', 'verify_otp_pass');
         formData.append('otp_code', code);
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             btn.innerText = "Verifikasi OTP"; btn.disabled = false;
@@ -1824,7 +1895,7 @@ if (isset($_POST['send_logs_email'])) {
         const formData = new FormData();
         formData.append('ajax_action', 'generate_2fa');
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if(data.status === 'success') {
@@ -1864,7 +1935,7 @@ if (isset($_POST['send_logs_email'])) {
         formData.append('ajax_action', 'verify_2fa_temp');
         formData.append('otp_code', code);
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             btn.innerText = "Continue"; btn.disabled = false;
@@ -1903,7 +1974,7 @@ if (isset($_POST['send_logs_email'])) {
         formData.append('ajax_action', 'finalize_2fa');
         formData.append('auth_name', name);
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if(data.status === 'success') {
@@ -1989,13 +2060,13 @@ if (isset($_POST['send_logs_email'])) {
             return;
         }
 
-        btn.innerText = "Memeriksa..."; btn.disabled = true;
+        btn.innerText = "Checking..."; btn.disabled = true;
 
         const formData = new FormData();
         formData.append('ajax_action', 'verify_2fa_general');
         formData.append('otp_code', code);
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             btn.innerText = "Verifikasi"; btn.disabled = false;
@@ -2037,7 +2108,7 @@ if (isset($_POST['send_logs_email'])) {
         formData.append('ajax_action', 'disable_2fa_secure');
         formData.append('otp_code', code);
 
-        fetch('index.php', { method: 'POST', body: formData })
+        fetch('./', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
             if(data.status === 'success') {
@@ -2067,6 +2138,11 @@ if (isset($_POST['send_logs_email'])) {
         link.innerText = "Gunakan Kode Backup";
         msgOtp.style.display = "block";
         msgBackup.style.display = "none";
+    }
+
+    function submitDownloadForm() {
+        // Submit form secara program setelah lolos verifikasi 2FA
+        document.getElementById('formDownloadData').submit();
     }
 
 
