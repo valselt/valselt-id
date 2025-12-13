@@ -213,7 +213,7 @@ function doLogin($row, $redirect_to, $conn) {
                         </div>
                         
                         <div style="display:flex; justify-content:space-between; margin-bottom:20px; font-size:0.9rem; color:var(--text-muted);">
-                            <label><input type="checkbox" name="remember_me" value="1"> Ingat Saya</label>
+                            <label><input type="checkbox" name="remember_me" value="1"> Remember Me</label>
                             <a href="#" style="color:var(--text-main); font-weight:600;">Forgot Password?</a>
                         </div>
 

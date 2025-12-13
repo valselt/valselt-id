@@ -243,6 +243,7 @@ if (isset($_POST['ajax_action'])) {
 
 // --- LOGIC SIMPAN PASSWORD BARU (POST BIASA) ---
 if (isset($_POST['save_new_password'])) {
+    verify_csrf();
     $new_pass = $_POST['new_password'];
     
     // Validasi Standar Register (Length, Upper, Number, Symbol)
@@ -270,6 +271,7 @@ if (isset($_POST['save_new_password'])) {
 
 
 if (isset($_POST['update_profile'])) {
+    verify_csrf();
     $new_username = htmlspecialchars($_POST['username']);
     $new_email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     // (Password di form utama sudah dihapus HTML-nya, tapi logic PHP tetap dijaga untuk keamanan back-end)
@@ -349,6 +351,7 @@ if (isset($_POST['update_profile'])) {
 
 // --- LOGIC HAPUS PASSKEY (BARU) ---
 if (isset($_POST['delete_passkey'])) {
+    verify_csrf();
     $pk_id = intval($_POST['pk_id']);
     
     // Pastikan passkey milik user yang sedang login
@@ -368,6 +371,7 @@ if (isset($_POST['delete_passkey'])) {
 
 // --- LOGIC REVOKE APP ACCESS ---
 if (isset($_POST['revoke_app_id'])) {
+    verify_csrf();
     $app_id = intval($_POST['revoke_app_id']);
     
     // Pastikan app milik user yang login
@@ -387,6 +391,7 @@ if (isset($_POST['revoke_app_id'])) {
 
 // --- HAPUS AKUN ---
 if (isset($_POST['delete_account'])) {
+    verify_csrf();
     // LOG SEBELUM MENGHAPUS
     logActivity($conn, $user_id, "Melakukan penghapusan akun permanen");
 
@@ -404,6 +409,7 @@ if (isset($_POST['delete_account'])) {
 // --- LOGIC KIRIM LOGS KE EMAIL (CSV) ---
 // --- LOGIC KIRIM LOGS KE EMAIL (CSV) ---
 if (isset($_POST['send_logs_email'])) {
+    verify_csrf();
     // Ganti activity_logs menjadi logsuser
     $q_logs = $conn->query("SELECT behaviour, created_at FROM logsuser WHERE id_user='$user_id' ORDER BY id DESC");
     
@@ -432,6 +438,7 @@ if (isset($_POST['send_logs_email'])) {
 
 // --- LOGIC DOWNLOAD DATA PRIBADI (JSON) ---
 if (isset($_POST['download_my_data'])) {
+    verify_csrf();
     // 1. Siapkan Struktur Data
     $export = [
         'generated_at' => date('Y-m-d H:i:s'),
@@ -485,6 +492,7 @@ if (isset($_POST['download_my_data'])) {
 
 // --- LOGIC LOGOUT SEMUA PERANGKAT (KECUALI INI) ---
 if (isset($_POST['logout_all_devices'])) {
+    verify_csrf();
     $current_sess = session_id();
     
     // Matikan semua device yang session_id-nya BUKAN session ini
@@ -507,6 +515,7 @@ if (isset($_POST['logout_all_devices'])) {
 
 // --- LOGIC HAPUS RIWAYAT AKTIVITAS ---
 if (isset($_POST['clear_activity_logs'])) {
+    verify_csrf();
     // Hapus semua log milik user ini
     $stmt = $conn->prepare("DELETE FROM logsuser WHERE id_user = ?");
     $stmt->bind_param("i", $user_id);
@@ -546,6 +555,7 @@ if (isset($_POST['clear_activity_logs'])) {
 
     <div class="profile-card">
         <form action="./" method="POST" id="profileForm">
+            <?php echo csrf_field(); ?>
             <input type="hidden" name="cropped_image" id="cropped_image_data">
 
             <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:40px;">
@@ -1029,6 +1039,7 @@ if (isset($_POST['clear_activity_logs'])) {
                                     </div>
                                     
                                     <form method="POST" onsubmit="return confirm('Revoke access for <?php echo $appName; ?>? You will need to login again next time.');">
+                                        <?php echo csrf_field(); ?>
                                         <input type="hidden" name="revoke_app_id" value="<?php echo $app['id']; ?>">
                                         <button type="submit" class="btn" style="width:auto; padding: 6px 12px; font-size:0.8rem; background:white; border:1px solid #d1d5db; color:var(--text-muted); cursor:pointer;">
                                             Revoke
@@ -1038,7 +1049,7 @@ if (isset($_POST['clear_activity_logs'])) {
 
                             <?php endwhile; else: ?>
                                 <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
-                                    <i class='bx bx-cube' style="font-size: 2rem; display:block; margin-bottom:10px; opacity:0.5;"></i>
+                                    <i class='bx bx-box' style="font-size: 2rem; display:block; margin-bottom:10px; opacity:0.5;"></i>
                                     You haven't connected any apps to Valselt ID yet.
                                 </div>
                             <?php endif; ?>
@@ -1079,6 +1090,7 @@ if (isset($_POST['clear_activity_logs'])) {
                     </div>
                     
                     <form method="POST" target="_blank" style="margin:0;" id="formDownloadData">
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" name="download_my_data" value="1">
                         
                         <button type="button" onclick="checkSecurityAndExecute(submitDownloadForm)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s; border-radius:8px;" title="Download JSON Archive">
@@ -1096,6 +1108,7 @@ if (isset($_POST['clear_activity_logs'])) {
                     </div>
                     
                     <form method="POST" style="margin:0;" id="formLogoutOthers">
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" name="logout_all_devices" value="1">
                         
                         <button type="button" onclick="checkSecurityAndExecute(openLogoutConfirmation)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s; border-radius:8px;" title="Force Logout Others">
@@ -1113,6 +1126,7 @@ if (isset($_POST['clear_activity_logs'])) {
                     </div>
                     
                     <form method="POST" style="margin:0;" id="formClearLogs">
+                        <?php echo csrf_field(); ?>
                         <input type="hidden" name="clear_activity_logs" value="1">
                         <button type="button" onclick="checkSecurityAndExecute(submitClearLogsForm)" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s; border-radius:8px;" title="Clear Logs">
                             <i class='bx bx-trash-alt' style="font-size: 1.2rem;"></i>
@@ -1217,6 +1231,7 @@ if (isset($_POST['clear_activity_logs'])) {
             <button type="button" onclick="closeModal('deleteModal')" class="popup-btn">Cancel</button>
             
             <form method="POST" style="width:100%;">
+                <?php echo csrf_field(); ?>
                 <button type="submit" name="delete_account" class="popup-btn error">Yes, Delete Permanently</button>
             </form>
         </div>
@@ -1336,6 +1351,7 @@ if (isset($_POST['clear_activity_logs'])) {
             <button type="button" onclick="closeModal('modalDeletePasskey')" class="popup-btn">Cancel</button>
             
             <form method="POST" style="width:100%;">
+                <?php echo csrf_field(); ?>
                 <input type="hidden" name="pk_id" id="delete_pk_id_target">
                 <button type="submit" name="delete_passkey" class="popup-btn error">Yes, Delete Passkey</button>
             </form>
@@ -1383,6 +1399,7 @@ if (isset($_POST['clear_activity_logs'])) {
         <p class="popup-message">Please create your new password.</p>
         
         <form method="POST">
+            <?php echo csrf_field(); ?>
             <input type="password" id="new_password_input" name="new_password" class="form-control" placeholder="New Password" required style="margin-bottom:10px; text-align:center;">
             
             <div class="password-requirements" id="pwd-req-box-modal" style="text-align:left; background:#f9fafb; padding:10px; border-radius:8px; border:1px solid #e5e7eb; margin-bottom:15px; font-size:0.85rem;">
@@ -1484,6 +1501,7 @@ if (isset($_POST['clear_activity_logs'])) {
 
         <div style="display:flex; gap:10px; margin-top: 20px;">
             <form method="POST" style="flex: 1;" id="csvForm">
+                <?php echo csrf_field(); ?>
                 <button type="button" onclick="submitCSVForm()" id="btnSendCSV" class="popup-btn" style="background:#000; color:white; border:none; display:flex; align-items:center; justify-content: center; gap:8px; width: 100%;">
                     <i class='bx bx-envelope'></i> 
                     <span id="csvButtonText">Export CSV to Email</span>

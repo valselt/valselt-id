@@ -1,5 +1,44 @@
 <?php
+// 1. SECURITY HEADERS
+header("X-Frame-Options: SAMEORIGIN");
+header("X-Content-Type-Options: nosniff");
+header("X-XSS-Protection: 1; mode=block");
+
+// 2. DETEKSI HTTPS PINTAR (Support Cloudflare Tunnel)
+$is_secure = false;
+if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+    $is_secure = true;
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] == 'https') {
+    $is_secure = true; 
+} elseif (isset($_SERVER['HTTP_CF_VISITOR']) && strpos($_SERVER['HTTP_CF_VISITOR'], 'https') !== false) {
+    $is_secure = true;
+}
+
+// 3. SESSION CONFIG (Optimized untuk SSO & Cloudflare)
+ini_set('session.cookie_httponly', 1);
+ini_set('session.use_only_cookies', 1);
+
+// PENTING: Gunakan 'Lax' agar SSO dari Spencal tidak minta login ulang terus
+ini_set('session.cookie_samesite', 'Lax'); 
+
+// Otomatis Secure jika terdeteksi HTTPS (Cloudflare/Local SSL)
+ini_set('session.cookie_secure', $is_secure ? 1 : 0);
+
 session_start();
+
+// 4. CSRF PROTECTION
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+function csrf_field() {
+    return '<input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">';
+}
+function verify_csrf() {
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Security Warning: CSRF Token Invalid! Refresh halaman.");
+    }
+}
+
 date_default_timezone_set('Asia/Jakarta');
 
 // Pastikan Anda sudah COPY folder vendor dari spencal ke valselt-id
