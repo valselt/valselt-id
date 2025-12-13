@@ -15,7 +15,99 @@ if (isset($_POST['ajax_action'])) {
     $uid = $_SESSION['valselt_user_id'];
     $response = ['status' => 'error', 'message' => 'Terjadi kesalahan'];
 
-    if ($_POST['ajax_action'] == 'verify_old_password') {
+    // 1. GENERATE SECRET & QR (Langkah Awal)
+    if ($_POST['ajax_action'] == 'generate_2fa') {
+        try {
+            $google2fa = new \PragmaRX\Google2FA\Google2FA();
+            $secret = $google2fa->generateSecretKey();
+            $_SESSION['temp_2fa_secret'] = $secret; // Simpan sementara
+            
+            $qrCodeUrl = $google2fa->getQRCodeUrl('Valselt ID', $user_data['email'], $secret);
+            echo json_encode(['status' => 'success', 'qr_url' => $qrCodeUrl, 'secret' => $secret]);
+        } catch (Exception $e) {
+            echo json_encode(['status' => 'error', 'message' => $e->getMessage()]);
+        }
+        exit();
+    }
+
+    // 2. VERIFIKASI KODE PERTAMA (Tanpa Simpan DB)
+    elseif ($_POST['ajax_action'] == 'verify_2fa_temp') {
+        $code = $_POST['otp_code'];
+        $secret = $_SESSION['temp_2fa_secret'] ?? null;
+
+        if (!$secret) { echo json_encode(['status' => 'error', 'message' => 'Sesi habis.']); exit(); }
+
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+        if ($google2fa->verifyKey($secret, $code)) {
+            // Jika benar, Generate Backup Code 32 Karakter
+            $chars = '0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ';
+            $backupCode = substr(str_shuffle(str_repeat($chars, 5)), 0, 32);
+            $_SESSION['temp_2fa_backup'] = $backupCode; // Simpan sementara
+
+            echo json_encode(['status' => 'success', 'backup_code' => $backupCode]);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Kode salah!']);
+        }
+        exit();
+    }
+
+    // 3. FINALISASI (Simpan Nama & Data ke DB)
+    elseif ($_POST['ajax_action'] == 'finalize_2fa') {
+        $authName = strip_tags(trim($_POST['auth_name']));
+        $secret = $_SESSION['temp_2fa_secret'] ?? null;
+        $backup = $_SESSION['temp_2fa_backup'] ?? null;
+
+        if (!$secret || !$backup) { echo json_encode(['status' => 'error', 'message' => 'Data tidak lengkap.']); exit(); }
+        if (empty($authName)) $authName = "Authenticator Saya";
+
+        // Simpan ke DB
+        $stmt = $conn->prepare("UPDATE users SET two_factor_secret=?, two_factor_name=?, two_factor_backup=?, is_2fa_enabled=1 WHERE id=?");
+        $stmt->bind_param("sssi", $secret, $authName, $backup, $uid);
+
+        if ($stmt->execute()) {
+            logActivity($conn, $uid, "Mengaktifkan 2FA: $authName");
+            
+            // Bersihkan sesi temp
+            unset($_SESSION['temp_2fa_secret']);
+            unset($_SESSION['temp_2fa_backup']);
+
+            // SET SESSION POPUP SUKSES (Agar muncul setelah reload)
+            $_SESSION['popup_status'] = 'success';
+            $_SESSION['popup_message'] = 'Authenticator Berhasil Diaktifkan!';
+
+            echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Gagal menyimpan database.']);
+        }
+        exit();
+    }
+
+    // 4. NONAKTIFKAN 2FA (Dengan Verifikasi Kode)
+    elseif ($_POST['ajax_action'] == 'disable_2fa_secure') {
+        $code = $_POST['otp_code'];
+        
+        // Ambil secret dari DB untuk verifikasi
+        $q = $conn->query("SELECT two_factor_secret FROM users WHERE id='$uid'");
+        $u = $q->fetch_assoc();
+        $secret = $u['two_factor_secret'];
+
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+        if ($google2fa->verifyKey($secret, $code)) {
+            // Kode Benar -> Hapus Data
+            $conn->query("UPDATE users SET two_factor_secret=NULL, two_factor_name=NULL, two_factor_backup=NULL, is_2fa_enabled=0 WHERE id='$uid'");
+            logActivity($conn, $uid, "Menonaktifkan 2FA Authenticator");
+            
+            $_SESSION['popup_status'] = 'success';
+            $_SESSION['popup_message'] = 'Authenticator berhasil dimatikan.';
+            
+            echo json_encode(['status' => 'success']);
+        } else {
+            echo json_encode(['status' => 'error', 'message' => 'Kode salah. Gagal menonaktifkan.']);
+        }
+        exit();
+    }
+
+    elseif ($_POST['ajax_action'] == 'verify_old_password') {
         $old_pass = $_POST['old_password'];
         $q = $conn->query("SELECT password FROM users WHERE id='$uid'");
         $row = $q->fetch_assoc();
@@ -106,7 +198,6 @@ if (isset($_POST['ajax_action'])) {
             $response = ['status' => 'error', 'message' => 'Kode OTP salah atau kadaluarsa!'];
         }
     }
-
     echo json_encode($response);
     exit(); // Stop eksekusi agar tidak memuat HTML
 }
@@ -295,11 +386,12 @@ if (isset($_POST['send_logs_email'])) {
     <link href="https://cdnjs.cloudflare.com/ajax/libs/cropperjs/1.5.13/cropper.min.css" rel="stylesheet">
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 <body style="background:#f9fafb;"> <div class="valselt-container">
     <div class="valselt-header">
         <img src="https://cdn.ivanaldorino.web.id/valselt/valselt_black.png" alt="Valselt" class="logo-dashboard">
-        <p style="color:var(--text-muted);">Pusat Pengaturan Akun</p>
+        <p style="color:var(--text-muted);">Account Center</p>
     </div>
 
     <div class="profile-card">
@@ -339,7 +431,7 @@ if (isset($_POST['send_logs_email'])) {
                     <input type="email" name="email" class="form-control" value="<?php echo htmlspecialchars($user_data['email']); ?>" required>
                 </div>
 
-                <button type="submit" name="update_profile" class="btn btn-primary">Simpan Perubahan</button>
+                <button type="submit" name="update_profile" class="btn btn-primary">Save Changes</button>
             </div>
         </form>
 
@@ -463,7 +555,10 @@ if (isset($_POST['send_logs_email'])) {
                         <div style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center; justify-content:space-between;" class="passkey-title">
                             <div class="passkey-header" style="display:flex; flex-direction:row; align-items:center;">
                                 <i class='bx bx-fingerprint' style="margin-right:10px; font-size:1.2rem;"></i>
-                                <h4>Passkey</h4>
+                                <div>
+                                    <h4>Passkey</h4>
+                                    <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Passwordless Login.</p>
+                                </div>
                             </div>
                             <button onclick="registerPasskey()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#000; color:white;">
                                 <i class='bx bx-plus'></i>
@@ -503,8 +598,30 @@ if (isset($_POST['send_logs_email'])) {
                             else: 
                             ?>
                                 <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
-                                    Belum ada Passkey Tersimpan. Klik "+" untuk menambahkannya.
+                                    No Passkeys are saved yet. Click "+" to add one.
                                 </div>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+
+                    <div class="accordion-content-inside">
+                        <div style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
+                            <div style="display:flex; flex-direction:row; align-items:center;">
+                                <i class='bx bx-mobile-alt' style="margin-right:10px; font-size:1.2rem;"></i>
+                                <div>
+                                    <h4>Authenticator (2FA)</h4>
+                                    <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Adds an additional layer of security to your account.</p>
+                                </div>
+                            </div>
+                            
+                            <?php if($user_data['is_2fa_enabled']): ?>
+                                <button onclick="disable2FA()" class="btn" style="width:auto; padding: 8px 16px; font-size:0.85rem; background:#fee2e2; color:#b91c1c; border:1px solid #fecaca;">
+                                    <i class='bx bx-power-off'></i> Disable
+                                </button>
+                            <?php else: ?>
+                                <button onclick="open2FAModal()" class="btn" style="width:auto; padding: 8px 16px; font-size:0.85rem; background:#000; color:white;">
+                                    Enable
+                                </button>
                             <?php endif; ?>
                         </div>
                     </div>
@@ -522,9 +639,9 @@ if (isset($_POST['send_logs_email'])) {
             <div style="display:flex; flex-direction:column; gap:15px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <div style="font-weight:600; color: #b45309;">Logs Akun</div>
+                        <div style="font-weight:600; color: #b45309;">Account Logs</div>
                         <div style="font-size:0.85rem; color: #ca8a04; opacity: 0.8; max-width: 300px; line-height: 1.5;">
-                            Melihat riwayat aktivitas keamanan akun Anda.
+                            View your account security activity history.
                         </div>
                     </div>
                     <button type="button" onclick="openLogsModal()" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#f59e0b; color:white; border:none; transition:0.2s;">
@@ -543,9 +660,9 @@ if (isset($_POST['send_logs_email'])) {
             <div style="display:flex; flex-direction:column; gap:15px;">
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <div style="font-weight:600; color: #9b2c2c;">Hapus Akun Permanen</div>
+                        <div style="font-weight:600; color: #9b2c2c;">Permanently Delete Account</div>
                         <div style="font-size:0.85rem; color: #c53030; opacity: 0.8; max-width: 300px; line-height: 1.5;">
-                            Tindakan ini tidak dapat dibatalkan. Semua data profil dan foto akan hilang selamanya.
+                            This action cannot be undone. All profile data and photos will be permanently deleted.
                         </div>
                     </div>
 
@@ -556,9 +673,9 @@ if (isset($_POST['send_logs_email'])) {
 
                 <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap: wrap; gap: 15px;">
                     <div>
-                        <div style="font-weight:600; color: #9b2c2c;">Ganti Password</div>
+                        <div style="font-weight:600; color: #9b2c2c;">Change Password</div>
                         <div style="font-size:0.85rem; color: #c53030; opacity: 0.8; max-width: 300px; line-height: 1.5;">
-                            Ganti Password Akun Anda dengan yang baru.
+                            Change your account password to a new one.
                         </div>
                     </div>
 
@@ -612,6 +729,70 @@ if (isset($_POST['send_logs_email'])) {
             <form method="POST" style="width:100%;">
                 <button type="submit" name="delete_account" class="popup-btn error">Ya, Hapus</button>
             </form>
+        </div>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalSetup2FA" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box" style="width: 400px; max-width: 95%;">
+        <div class="popup-icon-box success"><i class='bx bx-qr-scan'></i></div>
+        <h3 class="popup-title">Hubungkan Authenticator</h3>
+        <p class="popup-message" style="margin-bottom:15px;">Scan QR Code atau masukkan kode manual.</p>
+        
+        <div id="qrcode-container" style="background:#fff; padding:10px; border:1px solid #e5e7eb; display:inline-block; margin-bottom:10px;"></div>
+        
+        <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">
+            Kode Manual: <strong id="manual-secret-code" style="color:#000; font-family:monospace;">...</strong>
+        </p>
+
+        <div class="form-group">
+            <input type="text" id="2fa_setup_input" class="form-control" placeholder="Masukkan 6 Digit Kode" style="text-align:center; font-size:1.2rem;" maxlength="6">
+        </div>
+        
+        <div style="display:flex; gap:10px; margin-top:10px;">
+            <button onclick="closeModal('modalSetup2FA')" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
+            <button onclick="processStep1Verify()" class="popup-btn success" id="btnStep1">Lanjut</button>
+        </div>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalBackupCode" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box warning"><i class='bx bx-save'></i></div>
+        <h3 class="popup-title">Kode Cadangan</h3>
+        <p class="popup-message">Simpan kode ini di tempat aman! Ini satu-satunya cara memulihkan akun jika HP hilang.</p>
+        
+        <div style="background:#f3f4f6; padding:15px; border-radius:8px; border:1px dashed #9ca3af; margin:15px 0; word-break: break-all;">
+            <strong id="display_backup_code" style="font-family:monospace; font-size:1.1rem; color:#b45309;"></strong>
+        </div>
+        
+        <button onclick="processStep2Backup()" class="popup-btn warning">Saya Sudah Menyimpannya</button>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalAuthName" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box success"><i class='bx bx-edit'></i></div>
+        <h3 class="popup-title">Beri Nama</h3>
+        <p class="popup-message">Berikan nama untuk authenticator ini (Misal: HP Samsung).</p>
+        
+        <input type="text" id="auth_name_input" class="form-control" placeholder="Nama Authenticator" style="margin-bottom:15px; text-align:center;">
+        
+        <button onclick="processStep3Finalize()" class="popup-btn success" id="btnStep3">Simpan & Aktifkan</button>
+    </div>
+</div>
+
+<div class="popup-overlay" id="modalDisable2FA" style="display:none; opacity:0; transition: opacity 0.3s;">
+    <div class="popup-box">
+        <div class="popup-icon-box error"><i class='bx bx-lock-open'></i></div>
+        <h3 class="popup-title">Matikan Authenticator?</h3>
+        <p class="popup-message">Masukkan 6 digit kode dari aplikasi authenticator Anda untuk konfirmasi.</p>
+        
+        <input type="text" id="2fa_disable_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:1.2rem; margin-bottom:15px;" maxlength="6">
+        
+        <div style="display:flex; gap:10px;">
+            <button onclick="closeModal('modalDisable2FA')" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
+            <button onclick="confirmDisable2FA()" class="popup-btn error" id="btnDisable2FA">Matikan</button>
         </div>
     </div>
 </div>
@@ -1250,6 +1431,125 @@ if (isset($_POST['send_logs_email'])) {
                 content.style.height = "auto";
             }, { once: true });
         }
+    }
+
+    // --- STEP 1: BUKA SETUP & GENERATE QR ---
+    function open2FAModal() {
+        openModal('modalSetup2FA');
+        document.getElementById('qrcode-container').innerHTML = "Loading...";
+        document.getElementById('2fa_setup_input').value = "";
+        
+        const formData = new FormData();
+        formData.append('ajax_action', 'generate_2fa');
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                document.getElementById('qrcode-container').innerHTML = "";
+                new QRCode(document.getElementById("qrcode-container"), {
+                    text: data.qr_url,
+                    width: 150,
+                    height: 150
+                });
+                document.getElementById('manual-secret-code').innerText = data.secret;
+            } else {
+                alert(data.message);
+                closeModal('modalSetup2FA');
+            }
+        });
+    }
+
+    // --- STEP 2: VERIFIKASI KODE -> TAMPILKAN BACKUP CODE ---
+    function processStep1Verify() {
+        const code = document.getElementById('2fa_setup_input').value;
+        const btn = document.getElementById('btnStep1');
+
+        if(code.length < 6) { alert("Masukkan 6 digit kode."); return; }
+        
+        btn.innerText = "Memeriksa..."; btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'verify_2fa_temp');
+        formData.append('otp_code', code);
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            btn.innerText = "Lanjut"; btn.disabled = false;
+            if(data.status === 'success') {
+                // Tutup Modal 1, Buka Modal Backup
+                closeModal('modalSetup2FA');
+                document.getElementById('display_backup_code').innerText = data.backup_code;
+                openModal('modalBackupCode');
+            } else {
+                alert(data.message);
+            }
+        });
+    }
+
+    // --- STEP 3: DARI BACKUP CODE KE NAMING ---
+    function processStep2Backup() {
+        closeModal('modalBackupCode');
+        document.getElementById('auth_name_input').value = "";
+        openModal('modalAuthName');
+        setTimeout(() => document.getElementById('auth_name_input').focus(), 100);
+    }
+
+    // --- STEP 4: FINALISASI (SIMPAN NAMA & DATA) ---
+    function processStep3Finalize() {
+        const name = document.getElementById('auth_name_input').value;
+        const btn = document.getElementById('btnStep3');
+        
+        btn.innerText = "Menyimpan..."; btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'finalize_2fa');
+        formData.append('auth_name', name);
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                closeModal('modalAuthName');
+                // RELOAD HALAMAN (Popup Success akan muncul dari Session PHP)
+                location.reload(); 
+            } else {
+                alert(data.message);
+                btn.innerText = "Simpan & Aktifkan"; btn.disabled = false;
+            }
+        });
+    }
+
+    // --- DISABLE 2FA: BUKA MODAL INPUT ---
+    function disable2FA() {
+        document.getElementById('2fa_disable_input').value = "";
+        openModal('modalDisable2FA');
+    }
+
+    // --- DISABLE 2FA: PROSES VERIFIKASI & HAPUS ---
+    function confirmDisable2FA() {
+        const code = document.getElementById('2fa_disable_input').value;
+        const btn = document.getElementById('btnDisable2FA');
+
+        if(code.length < 6) { alert("Masukkan kode."); return; }
+
+        btn.innerText = "Memproses..."; btn.disabled = true;
+
+        const formData = new FormData();
+        formData.append('ajax_action', 'disable_2fa_secure');
+        formData.append('otp_code', code);
+
+        fetch('index.php', { method: 'POST', body: formData })
+        .then(r => r.json())
+        .then(data => {
+            if(data.status === 'success') {
+                location.reload(); // Reload untuk tampilkan popup sukses
+            } else {
+                alert(data.message);
+                btn.innerText = "Matikan"; btn.disabled = false;
+            }
+        });
     }
 
 
