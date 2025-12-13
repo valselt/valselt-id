@@ -46,7 +46,7 @@ if (isset($_POST['ajax_action'])) {
 
             echo json_encode(['status' => 'success', 'backup_code' => $backupCode]);
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'Kode salah!']);
+            echo json_encode(['status' => 'error', 'message' => 'Incorrect code!']);
         }
         exit();
     }
@@ -102,7 +102,7 @@ if (isset($_POST['ajax_action'])) {
             
             echo json_encode(['status' => 'success']);
         } else {
-            echo json_encode(['status' => 'error', 'message' => 'Kode salah. Gagal menonaktifkan.']);
+            echo json_encode(['status' => 'error', 'message' => 'Incorrect Code!']);
         }
         exit();
     }
@@ -450,7 +450,11 @@ if (isset($_POST['send_logs_email'])) {
                     
                     <div class="accordion-content-inside">
                         <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
-                            <i class='bx bx-link' style="margin-right:10px; font-size:1.2rem;"></i>Linked Accounts
+                            <i class='bx bx-link' style="margin-right:10px; font-size:1.2rem;"></i>
+                            <div>
+                                Linked Accounts
+                                <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Link to your Social Account.</p>
+                            </div>
                         </h4>
                         
                         <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -459,14 +463,14 @@ if (isset($_POST['send_logs_email'])) {
                                 <div>
                                     <div style="font-weight:500;">Google</div>
                                     <div style="font-size:0.85rem; color:var(--text-muted);">
-                                        <?php if($user_data['google_id']): ?> Terhubung <?php else: ?> Tidak terhubung <?php endif; ?>
+                                        <?php if($user_data['google_id']): ?> Connected <?php else: ?> Not Connected <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
                             <?php if($user_data['google_id']): ?>
-                                <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;"><i class='bx bx-check'></i> Linked</button>
+                                <button disabled class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;"><i class='bx bx-check'></i></button>
                             <?php else: ?>
-                                <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">Link Account</a>
+                                <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:white; border:1px solid #d1d5db;"><i class='bx bx-link-alt'></i></a>
                             <?php endif; ?>
                         </div>
 
@@ -476,22 +480,26 @@ if (isset($_POST['send_logs_email'])) {
                                 <div>
                                     <div style="font-weight:500;">GitHub</div>
                                     <div style="font-size:0.85rem; color:var(--text-muted);">
-                                        <?php if($user_data['github_id']): ?> Terhubung <?php else: ?> Tidak terhubung <?php endif; ?>
+                                        <?php if($user_data['github_id']): ?> Connected <?php else: ?> Not Connected <?php endif; ?>
                                     </div>
                                 </div>
                             </div>
                             <?php if($user_data['github_id']): ?>
-                                <button disabled class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;"><i class='bx bx-check'></i> Linked</button>
+                                <button disabled class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:#dcfce7; color:#166534; cursor:default;"><i class='bx bx-check'></i></button>
                             <?php else: ?>
                                 <?php $github_link_url = "https://github.com/login/oauth/authorize?client_id=" . $github_client_id . "&scope=user:email"; ?>
-                                <a href="<?php echo $github_link_url; ?>" class="btn" style="width:auto; padding: 8px 16px; font-size:0.9rem; background:white; border:1px solid #d1d5db;">Link Account</a>
+                                <a href="<?php echo $github_link_url; ?>" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:white; border:1px solid #d1d5db;"><i class='bx bx-link-alt'></i></a>
                             <?php endif; ?>
                         </div>
                     </div>
 
                     <div class="accordion-content-inside">
                         <h4 style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center;">
-                            <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> Devices
+                            <i class='bx bx-devices' style="margin-right:10px; font-size:1.2rem;"></i> 
+                            <div>
+                                Devices
+                                <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Your connected devices.</p>
+                            </div>
                         </h4>
 
                         <?php
@@ -624,6 +632,75 @@ if (isset($_POST['send_logs_email'])) {
                                 </button>
                             <?php endif; ?>
                         </div>
+                        <?php if($user_data['is_2fa_enabled']): ?>
+                            <?php
+                                // 1. Ambil Nama & Normalisasi ke huruf kecil untuk pencarian
+                                $authNameRaw = $user_data['two_factor_name'] ?? 'Authenticator Saya';
+                                $authName = strtolower($authNameRaw);
+
+                                // 2. Default Style (Boxicons - Hijau)
+                                $isSvg = false;
+                                $iconContent = "<i class='bx bx-check-shield' style='font-size:1.4rem;'></i>";
+                                $fgColor = '#166534'; // Warna Icon (untuk Boxicons)
+                                $bgColor = '#dcfce7'; // Warna Background Circle
+
+                                // 3. Logika Deteksi Nama
+                                if (strpos($authName, 'google') !== false) {
+                                    $isSvg = true; $slug = 'googleauthenticator'; $fgColor = '166534'; $bgColor = '#dcfce7';
+                                } 
+                                elseif (strpos($authName, 'proton') !== false) {
+                                    $isSvg = true; $slug = 'proton'; $fgColor = '6D4AFF'; $bgColor = '#f0ecff';
+                                }
+                                elseif (strpos($authName, '1') !== false || strpos($authName, '1password') !== false) {
+                                    $isSvg = true; $slug = '1password'; $fgColor = '3B66BC'; $bgColor = '#EBEFF8';
+                                }
+                                elseif (strpos($authName, 'bitwarden') !== false) {
+                                    $isSvg = true; $slug = 'bitwarden'; $fgColor = '175ddc'; $bgColor = '#e7eefb';
+                                }
+                                elseif (strpos($authName, 'ente') !== false) {
+                                    $isSvg = true; $slug = 'ente'; $fgColor = 'a75cff'; $bgColor = '#EDDEFF';
+                                }
+                                elseif (strpos($authName, 'last') !== false || strpos($authName, 'lastpass') !== false) {
+                                    $isSvg = true; $slug = 'lastpass'; $fgColor = 'D32D27'; $bgColor = '#fcecea'; // Fixed hex typo
+                                }
+                                elseif (strpos($authName, 'aegis') !== false) {
+                                    $isSvg = true; $slug = 'aegisauthenticator'; $fgColor = '005E9D'; $bgColor = '#E5EEF5';
+                                }
+                                elseif (strpos($authName, 'okta') !== false) {
+                                    $isSvg = true; $slug = 'okta'; $fgColor = 'ffffff'; $bgColor = '#007DC1';
+                                }
+                                elseif (strpos($authName, 'yubi') !== false || strpos($authName, 'yubikey') !== false || strpos($authName, 'yubico') !== false) {
+                                    $isSvg = true; $slug = 'yubico'; $fgColor = '84bd00'; $bgColor = '#F2F8E5';
+                                }
+
+                                // 4. Set Konten Icon Jika SVG
+                                if ($isSvg) {
+                                    $iconUrl = "https://cdn.simpleicons.org/$slug/$fgColor";
+                                    $iconContent = "<img src='$iconUrl' style='width:24px; height:24px; display:block;'>";
+                                    // Tambahkan # untuk color style container jika belum ada (untuk Boxicons fallback color)
+                                    $fgColor = "#" . str_replace('#', '', $fgColor); 
+                                }
+                            ?>
+
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
+                                <div style="display:flex; align-items:center;">
+                                    <div style="width:40px; height:40px; background:<?php echo $bgColor; ?>; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:<?php echo $fgColor; ?>;">
+                                        <?php echo $iconContent; ?>
+                                    </div>
+                                    
+                                    <div>
+                                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);">
+                                            <?php echo htmlspecialchars($authNameRaw); ?>
+                                        </div>
+                                        <div style="font-size:0.8rem; color:var(--text-muted);">Status: Aktif</div>
+                                    </div>
+                                </div>
+                                
+                                <button type="button" onclick="disable2FA()" class="btn" style="width:auto; padding: 8px; font-size:0.9rem; background:transparent; color:#ef4444; border:none; cursor:pointer;" title="Hapus Authenticator">
+                                    <i class='bx bx-trash' style="font-size:1.2rem;"></i>
+                                </button>
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -736,22 +813,26 @@ if (isset($_POST['send_logs_email'])) {
 <div class="popup-overlay" id="modalSetup2FA" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box" style="width: 400px; max-width: 95%;">
         <div class="popup-icon-box success"><i class='bx bx-qr-scan'></i></div>
-        <h3 class="popup-title">Hubungkan Authenticator</h3>
-        <p class="popup-message" style="margin-bottom:15px;">Scan QR Code atau masukkan kode manual.</p>
+        <h3 class="popup-title">Connect Authenticator</h3>
+        <p class="popup-message" style="margin-bottom:15px;">Scan the QR Code or enter the code manually.</p>
         
         <div id="qrcode-container" style="background:#fff; padding:10px; border:1px solid #e5e7eb; display:inline-block; margin-bottom:10px;"></div>
         
         <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:15px;">
-            Kode Manual: <strong id="manual-secret-code" style="color:#000; font-family:monospace;">...</strong>
+            Manual Code: <strong id="manual-secret-code" style="color:#000; font-family:monospace;">...</strong>
         </p>
 
         <div class="form-group">
-            <input type="text" id="2fa_setup_input" class="form-control" placeholder="Masukkan 6 Digit Kode" style="text-align:center; font-size:1.2rem;" maxlength="6">
+            <input type="text" id="2fa_setup_input" class="form-control" placeholder="Enter 6-digit code" style="text-align:center; letter-spacing:2px; font-size:1.2rem;" maxlength="6">
+            
+            <p id="setup_2fa_error" style="color:#ef4444; font-size:0.85rem; margin-top:8px; display:none; font-weight:500;">
+                Incorrect code!
+            </p>
         </div>
         
         <div style="display:flex; gap:10px; margin-top:10px;">
-            <button onclick="closeModal('modalSetup2FA')" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
-            <button onclick="processStep1Verify()" class="popup-btn success" id="btnStep1">Lanjut</button>
+            <button onclick="closeModal('modalSetup2FA')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
+            <button onclick="processStep1Verify()" class="popup-btn success" id="btnStep1">Next</button>
         </div>
     </div>
 </div>
@@ -759,40 +840,46 @@ if (isset($_POST['send_logs_email'])) {
 <div class="popup-overlay" id="modalBackupCode" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box warning"><i class='bx bx-save'></i></div>
-        <h3 class="popup-title">Kode Cadangan</h3>
-        <p class="popup-message">Simpan kode ini di tempat aman! Ini satu-satunya cara memulihkan akun jika HP hilang.</p>
+        <h3 class="popup-title">Backup Code</h3>
+        <p class="popup-message">Save this code in a safe place! It's the only way to recover your account if you lose your phone.</p>
         
         <div style="background:#f3f4f6; padding:15px; border-radius:8px; border:1px dashed #9ca3af; margin:15px 0; word-break: break-all;">
             <strong id="display_backup_code" style="font-family:monospace; font-size:1.1rem; color:#b45309;"></strong>
         </div>
         
-        <button onclick="processStep2Backup()" class="popup-btn warning">Saya Sudah Menyimpannya</button>
+        <button onclick="processStep2Backup()" class="popup-btn warning">I Have Saved It</button>
     </div>
 </div>
 
 <div class="popup-overlay" id="modalAuthName" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box success"><i class='bx bx-edit'></i></div>
-        <h3 class="popup-title">Beri Nama</h3>
-        <p class="popup-message">Berikan nama untuk authenticator ini (Misal: HP Samsung).</p>
+        <h3 class="popup-title">Give a Name</h3>
+        <p class="popup-message">Give a name to this authenticator (e.g., Samsung Phone).</p>
         
-        <input type="text" id="auth_name_input" class="form-control" placeholder="Nama Authenticator" style="margin-bottom:15px; text-align:center;">
+        <input type="text" id="auth_name_input" class="form-control" placeholder="Authenticator Name" style="margin-bottom:15px; text-align:center;">
         
-        <button onclick="processStep3Finalize()" class="popup-btn success" id="btnStep3">Simpan & Aktifkan</button>
+        <button onclick="processStep3Finalize()" class="popup-btn success" id="btnStep3">Save & Activate</button>
     </div>
 </div>
 
 <div class="popup-overlay" id="modalDisable2FA" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box error"><i class='bx bx-lock-open'></i></div>
-        <h3 class="popup-title">Matikan Authenticator?</h3>
-        <p class="popup-message">Masukkan 6 digit kode dari aplikasi authenticator Anda untuk konfirmasi.</p>
+        <h3 class="popup-title">Disable Authenticator?</h3>
+        <p class="popup-message">Enter the 6-digit code from your authenticator app to confirm.</p>
         
-        <input type="text" id="2fa_disable_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:1.2rem; margin-bottom:15px;" maxlength="6">
+        <div class="form-group">
+            <input type="text" id="2fa_disable_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:1.2rem;" maxlength="6">
+            
+            <p id="disable_2fa_error" style="color:#ef4444; font-size:0.85rem; margin-top:8px; display:none; font-weight:500;">
+                Incorrect code!
+            </p>
+        </div>
         
-        <div style="display:flex; gap:10px;">
-            <button onclick="closeModal('modalDisable2FA')" class="popup-btn" style="background:#f3f4f6; color:#111;">Batal</button>
-            <button onclick="confirmDisable2FA()" class="popup-btn error" id="btnDisable2FA">Matikan</button>
+        <div style="display:flex; gap:10px; margin-top:15px;">
+            <button onclick="closeModal('modalDisable2FA')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
+            <button onclick="confirmDisable2FA()" class="popup-btn error" id="btnDisable2FA">Disable</button>
         </div>
     </div>
 </div>
@@ -1439,6 +1526,9 @@ if (isset($_POST['send_logs_email'])) {
         document.getElementById('qrcode-container').innerHTML = "Loading...";
         document.getElementById('2fa_setup_input').value = "";
         
+        // RESET ERROR (Sembunyikan pesan error saat modal dibuka)
+        document.getElementById('setup_2fa_error').style.display = 'none'; 
+        
         const formData = new FormData();
         formData.append('ajax_action', 'generate_2fa');
 
@@ -1454,7 +1544,7 @@ if (isset($_POST['send_logs_email'])) {
                 });
                 document.getElementById('manual-secret-code').innerText = data.secret;
             } else {
-                alert(data.message);
+                alert(data.message); // Error server tetap alert saja (jarang terjadi)
                 closeModal('modalSetup2FA');
             }
         });
@@ -1462,10 +1552,19 @@ if (isset($_POST['send_logs_email'])) {
 
     // --- STEP 2: VERIFIKASI KODE -> TAMPILKAN BACKUP CODE ---
     function processStep1Verify() {
-        const code = document.getElementById('2fa_setup_input').value;
+        const codeInput = document.getElementById('2fa_setup_input');
+        const code = codeInput.value;
         const btn = document.getElementById('btnStep1');
+        const errorMsg = document.getElementById('setup_2fa_error');
 
-        if(code.length < 6) { alert("Masukkan 6 digit kode."); return; }
+        // Reset Error dulu
+        errorMsg.style.display = 'none';
+
+        if(code.length < 6) { 
+            errorMsg.innerText = "Enter the 6-digit code.";
+            errorMsg.style.display = 'block';
+            return; 
+        }
         
         btn.innerText = "Memeriksa..."; btn.disabled = true;
 
@@ -1476,14 +1575,19 @@ if (isset($_POST['send_logs_email'])) {
         fetch('index.php', { method: 'POST', body: formData })
         .then(r => r.json())
         .then(data => {
-            btn.innerText = "Lanjut"; btn.disabled = false;
+            btn.innerText = "Continue"; btn.disabled = false;
+            
             if(data.status === 'success') {
-                // Tutup Modal 1, Buka Modal Backup
+                // Kode Benar -> Lanjut ke step berikutnya
                 closeModal('modalSetup2FA');
                 document.getElementById('display_backup_code').innerText = data.backup_code;
                 openModal('modalBackupCode');
             } else {
-                alert(data.message);
+                // KODE SALAH -> Tampilkan di element <p>
+                errorMsg.innerText = data.message; // "Kode salah!"
+                errorMsg.style.display = 'block';
+                codeInput.value = ""; // Kosongkan input agar user bisa ketik ulang
+                codeInput.focus();    // Fokuskan kursor kembali
             }
         });
     }
@@ -1524,15 +1628,26 @@ if (isset($_POST['send_logs_email'])) {
     // --- DISABLE 2FA: BUKA MODAL INPUT ---
     function disable2FA() {
         document.getElementById('2fa_disable_input').value = "";
+        // Sembunyikan error jika sebelumnya pernah muncul
+        document.getElementById('disable_2fa_error').style.display = 'none'; 
         openModal('modalDisable2FA');
     }
 
     // --- DISABLE 2FA: PROSES VERIFIKASI & HAPUS ---
     function confirmDisable2FA() {
-        const code = document.getElementById('2fa_disable_input').value;
+        const codeInput = document.getElementById('2fa_disable_input');
+        const code = codeInput.value;
         const btn = document.getElementById('btnDisable2FA');
+        const errorMsg = document.getElementById('disable_2fa_error');
 
-        if(code.length < 6) { alert("Masukkan kode."); return; }
+        // Reset Error
+        errorMsg.style.display = 'none';
+
+        if(code.length < 6) { 
+            errorMsg.innerText = "Masukkan kode 6 digit.";
+            errorMsg.style.display = 'block';
+            return; 
+        }
 
         btn.innerText = "Memproses..."; btn.disabled = true;
 
@@ -1546,8 +1661,13 @@ if (isset($_POST['send_logs_email'])) {
             if(data.status === 'success') {
                 location.reload(); // Reload untuk tampilkan popup sukses
             } else {
-                alert(data.message);
+                // JANGAN ALERT, TAPI TAMPILKAN DI MODAL
+                errorMsg.innerText = data.message; // "Kode salah. Gagal menonaktifkan."
+                errorMsg.style.display = 'block';
+                
                 btn.innerText = "Matikan"; btn.disabled = false;
+                codeInput.value = ""; // Kosongkan input biar user bisa ketik ulang
+                codeInput.focus();
             }
         });
     }
