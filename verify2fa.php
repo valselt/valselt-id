@@ -81,7 +81,7 @@ if (isset($_POST['verify_2fa'])) {
         if (isset($_SESSION['sso_redirect_to'])) {
              processSSORedirect($conn, $uid, $target); 
         } else {
-             header("Location: index");
+             header("Location: ./");
         }
         exit();
         

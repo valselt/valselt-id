@@ -94,7 +94,7 @@ if (isset($_SESSION['valselt_user_id'])) {
         // Error: Akun GitHub ini milik orang lain
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Akun GitHub ini sudah terhubung ke pengguna lain!';
-        header("Location: index");
+        header("Location: ./");
         exit();
     }
 
@@ -106,7 +106,7 @@ if (isset($_SESSION['valselt_user_id'])) {
     handleRememberMe($conn, $current_user_id);
     $_SESSION['popup_status'] = 'success';
     $_SESSION['popup_message'] = 'Akun GitHub berhasil ditautkan!';
-    header("Location: index");
+    header("Location: ./");
     exit();
 }
 
@@ -193,7 +193,7 @@ else {
                 logUserDevice($conn, $new_id);
                 handleRememberMe($conn, $new_id);
                 
-                header("Location: index");
+                header("Location: ./");
                 exit();
             } else {
                 die("Gagal mendaftar ke database. Error: " . $conn->error);
@@ -211,7 +211,7 @@ function doGithubLogin($row, $conn, $deviceInfo) {
     logUserDevice($conn, $row['id']);
     handleRememberMe($conn, $row['id']);
     
-    header("Location: index");
+    header("Location: ./");
     exit();
 }
 ?>

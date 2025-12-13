@@ -262,7 +262,7 @@ if (isset($_POST['save_new_password'])) {
         $_SESSION['popup_status'] = 'success';
         $_SESSION['popup_message'] = 'Password berhasil diganti!';
     }
-    header("Location: index"); exit();
+    header("Location: ./"); exit();
 }
 
 
@@ -343,7 +343,7 @@ if (isset($_POST['update_profile'])) {
     $_SESSION['valselt_username'] = $new_username;
     $_SESSION['popup_status'] = 'success';
     $_SESSION['popup_message'] = 'Profil berhasil diperbarui!';
-    header("Location: index");
+    header("Location: ./");
     exit();
 }
 
@@ -363,7 +363,7 @@ if (isset($_POST['delete_passkey'])) {
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Gagal menghapus passkey.';
     }
-    header("Location: index"); exit();
+    header("Location: ./"); exit();
 }
 
 // --- LOGIC REVOKE APP ACCESS ---
@@ -382,7 +382,7 @@ if (isset($_POST['revoke_app_id'])) {
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Gagal mencabut akses.';
     }
-    header("Location: index"); exit();
+    header("Location: ./"); exit();
 }
 
 // --- HAPUS AKUN ---
@@ -427,7 +427,7 @@ if (isset($_POST['send_logs_email'])) {
         $_SESSION['popup_status'] = 'warning';
         $_SESSION['popup_message'] = 'Belum ada data log untuk dikirim.';
     }
-    header("Location: index"); exit();
+    header("Location: ./"); exit();
 }
 // ...
 
@@ -453,7 +453,7 @@ if (isset($_POST['send_logs_email'])) {
     </div>
 
     <div class="profile-card">
-        <form action="index" method="POST" id="profileForm">
+        <form action="./" method="POST" id="profileForm">
             <input type="hidden" name="cropped_image" id="cropped_image_data">
 
             <div style="display:flex; flex-direction:column; align-items:center; margin-bottom:40px;">

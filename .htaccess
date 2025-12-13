@@ -1,10 +1,18 @@
+# Matikan MultiViews agar tidak bentrok dengan RewriteRule
+Options -MultiViews
+
 RewriteEngine On
 
-# 1. Jika user mengetik .php manual, paksa redirect ke versi tanpa .php (Untuk SEO & Kerapihan)
+# 1. Hapus "index" atau "index.php" dari URL -> Redirect ke Root (/)
+RewriteCond %{THE_REQUEST} ^.*/index(\.php)?\s [NC]
+RewriteRule ^(.*)index(\.php)?$ /$1 [R=301,L]
+
+# 2. Hapus ekstensi .php untuk file lain -> Redirect ke versi bersih
 RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+RewriteCond %{REQUEST_URI} !/index\.php$ [NC]
 RewriteRule ^ /%1 [R=301,L,NE]
 
-# 2. Sembunyikan ekstensi .php secara internal
+# 3. Sembunyikan ekstensi .php secara internal
 RewriteCond %{REQUEST_FILENAME} !-d
 RewriteCond %{REQUEST_FILENAME}.php -f
 RewriteRule ^(.+?)/?$ $1.php [L]

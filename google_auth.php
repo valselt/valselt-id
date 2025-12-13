@@ -35,7 +35,7 @@ if (isset($_GET['code'])) {
                 $_SESSION['popup_status'] = 'error';
                 $_SESSION['popup_message'] = 'Gagal menautkan akun (Mungkin email Google ini sudah dipakai akun lain).';
             }
-            header("Location: index");
+            header("Location: ./");
             exit();
         }
 

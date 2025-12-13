@@ -10,6 +10,22 @@ if(isset($_GET['redirect_to'])){
 // 1. TANGKAP TUJUAN SSO
 $redirect_to = isset($_GET['redirect_to']) ? $_GET['redirect_to'] : '';
 
+// --- DECODE BASE64 ---
+// Jika parameter ada isinya tapi TIDAK dimulai dengan http, berarti itu Base64
+if (!empty($redirect_to) && strpos($redirect_to, 'http') !== 0) {
+    $decoded = base64_decode($redirect_to, true);
+    // Pastikan hasil decode valid
+    if ($decoded !== false) {
+        $redirect_to = $decoded;
+    }
+}
+// ---------------------
+
+if(isset($_GET['redirect_to'])){
+    // Simpan yang sudah di-decode ke session
+    $_SESSION['sso_redirect_to'] = $redirect_to; 
+}
+
 // 2. LOGIKA JIKA TOMBOL "LANJUTKAN SEBAGAI..." DITEKAN
 if (isset($_POST['confirm_sso']) && isset($_SESSION['valselt_user_id'])) {
     processSSORedirect($conn, $_SESSION['valselt_user_id'], $redirect_to);
@@ -25,7 +41,7 @@ if ($is_logged_in) {
     $user_info = $q->fetch_assoc();
     
     if (empty($redirect_to)) {
-        header("Location: index");
+        header("Location: ./");
         exit();
     }
 }

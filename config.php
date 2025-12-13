@@ -600,6 +600,10 @@ function checkTrustedDevice($conn, $uid) {
 
 // FUNGSI UNTUK MENCATAT & REDIRECT SSO
 function processSSORedirect($conn, $uid, $target) {
+    if (!empty($target) && strpos($target, 'http') !== 0) {
+        $decoded = base64_decode($target, true);
+        if ($decoded) $target = $decoded;
+    }
     if (!empty($target)) {
         // 1. Ambil Nama Domain/App dari URL Target
         $parsed = parse_url($target);
@@ -638,7 +642,7 @@ function processSSORedirect($conn, $uid, $target) {
         $conn->query("UPDATE users SET auth_token='$token' WHERE id='$uid'");
         header("Location: " . $target . "?token=" . $token);
     } else {
-        header("Location: index");
+        header("Location: ./");
     }
     exit();
 }
