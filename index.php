@@ -580,20 +580,120 @@ if (isset($_POST['send_logs_email'])) {
                             if ($q_pk->num_rows > 0):
                                 while($pk = $q_pk->fetch_assoc()):
                                     $pk_date = date('d M Y, H:i', strtotime($pk['created_at']));
-                                    $source = $pk['credential_source'] ? htmlspecialchars($pk['credential_source']) : 'Passkey Credential';
+                                    $sourceRaw = $pk['credential_source'] ? htmlspecialchars($pk['credential_source']) : 'Passkey Credential';
+                                    $source = strtolower($sourceRaw); // Untuk pencarian case-insensitive
                                     
-                                    $iconClass = 'bx-key'; $bgColor = '#e0f2fe'; $iconColor = '#0284c7';
-                                    if (stripos($source, 'Google') !== false || stripos($source, 'Android') !== false) { $iconClass = 'bxl-google'; $bgColor = '#dcfce7'; $iconColor = '#166534'; } 
-                                    elseif (stripos($source, 'iCloud') !== false || stripos($source, 'Apple') !== false) { $iconClass = 'bxl-apple'; $bgColor = '#f3f4f6'; $iconColor = '#1f2937'; } 
-                                    elseif (stripos($source, 'Windows') !== false) { $iconClass = 'bxl-windows'; $bgColor = '#dbeafe'; $iconColor = '#2563eb'; }
+                                    // --- 1. DEFAULT STYLE (Boxicons - Biru) ---
+                                    $isSvg = false;
+                                    $iconContent = "<i class='bx bx-key' style='font-size:1.4rem;'></i>";
+                                    $bgColor = '#e0f2fe'; 
+                                    $fgColor = '#0284c7'; // Warna Icon Boxicons
+
+                                    // --- 2. DETEKSI PLATFORM UTAMA (PRIORITAS 1) ---
+                                    // Tetap dipertahankan sesuai permintaan, icon Boxicons bawaan
+                                    if (strpos($source, 'google') !== false || strpos($source, 'android') !== false) { 
+                                        $iconContent = "<i class='bx bxl-google' style='font-size:1.4rem;'></i>"; 
+                                        $bgColor = '#dcfce7'; $fgColor = '#166534'; 
+                                    } 
+                                    elseif (strpos($source, 'icloud') !== false || strpos($source, 'apple') !== false || strpos($source, 'iphone') !== false || strpos($source, 'ipad') !== false || strpos($source, 'mac') !== false) { 
+                                        $iconContent = "<i class='bx bxl-apple' style='font-size:1.4rem;'></i>"; 
+                                        $bgColor = '#f3f4f6'; $fgColor = '#1f2937'; 
+                                    } 
+                                    elseif (strpos($source, 'windows') !== false) { 
+                                        $iconContent = "<i class='bx bxl-windows' style='font-size:1.4rem;'></i>"; 
+                                        $bgColor = '#dbeafe'; $fgColor = '#2563eb'; 
+                                    }
+                                    
+                                    // --- 3. DETEKSI 3RD PARTY APPS (PRIORITAS 2 - SIMPLEICONS) ---
+                                    // Jika nama mengandung keyword tertentu, override icon & warna
+                                    else {
+                                        $slug = ''; // SimpleIcons slug
+                                        
+                                        if (strpos($source, 'proton') !== false) {
+                                            $isSvg = true; $slug = 'proton'; $fgColor = '6D4AFF'; $bgColor = '#f0ecff';
+                                        }
+                                        elseif (strpos($source, '1') !== false || strpos($source, '1password') !== false) {
+                                            $isSvg = true; $slug = '1password'; $fgColor = '3B66BC'; $bgColor = '#EBEFF8';
+                                        }
+                                        elseif (strpos($source, 'bitwarden') !== false) {
+                                            $isSvg = true; $slug = 'bitwarden'; $fgColor = '175ddc'; $bgColor = '#e7eefb';
+                                        }
+                                        elseif (strpos($source, 'ente') !== false) {
+                                            $isSvg = true; $slug = 'ente'; $fgColor = 'a75cff'; $bgColor = '#EDDEFF';
+                                        }
+                                        elseif (strpos($source, 'last') !== false || strpos($source, 'lastpass') !== false) {
+                                            $isSvg = true; $slug = 'lastpass'; $fgColor = 'D32D27'; $bgColor = '#f6d5d5';
+                                        }
+                                        elseif (strpos($source, 'aegis') !== false) {
+                                            $isSvg = true; $slug = 'aegisauthenticator'; $fgColor = '005E9D'; $bgColor = '#E5EEF5';
+                                        }
+                                        elseif (strpos($source, 'okta') !== false) {
+                                            $isSvg = true; $slug = 'okta'; $fgColor = '000000'; $bgColor = '#007DC1'; // Icon hitam agar kontras di bg biru
+                                        }
+                                        elseif (strpos($source, 'yubi') !== false || strpos($source, 'yubikey') !== false || strpos($source, 'yubico') !== false) {
+                                            $isSvg = true; $slug = 'yubico'; $fgColor = '84bd00'; $bgColor = '#F2F8E5';
+                                        }
+                                        elseif (strpos($source, 'keeper') !== false) {
+                                            $isSvg = true; $slug = 'keeper'; $fgColor = 'FFC700'; $bgColor = '#FFF9E5';
+                                        }
+                                        elseif (strpos($source, 'norton') !== false) {
+                                            $isSvg = true; $slug = 'norton'; $fgColor = '000000'; $bgColor = '#FFE01A';
+                                        }
+                                        elseif (strpos($source, 'dashlane') !== false) {
+                                            $isSvg = true; $slug = 'dashlane'; $fgColor = '0E353D'; $bgColor = '#E6EAEB';
+                                        }
+                                        elseif (strpos($source, 'nord') !== false || strpos($source, 'nordpass') !== false) {
+                                            $isSvg = true; $slug = 'nordvpn'; $fgColor = '4687FF'; $bgColor = '#ECF3FF';
+                                        }
+                                        elseif (strpos($source, 'enpass') !== false) {
+                                            $isSvg = true; $slug = 'enpass'; $fgColor = '0D47A1'; $bgColor = '#E6ECF5';
+                                        }
+                                        elseif (strpos($source, 'kee') !== false || strpos($source, 'keepass') !== false || strpos($source, 'keepassxc') !== false) {
+                                            $isSvg = true; $slug = 'keepassxc'; $fgColor = '6CAC4D'; $bgColor = '#F0F6ED';
+                                        }
+                                        elseif (strpos($source, 'avira') !== false) {
+                                            $isSvg = true; $slug = 'avira'; $fgColor = 'E02027'; $bgColor = '#FBE8E9';
+                                        }
+                                        elseif (strpos($source, 'avast') !== false) {
+                                            $isSvg = true; $slug = 'avast'; $fgColor = 'ffffff'; $bgColor = '#FF7800';
+                                        }
+                                        elseif (strpos($source, 'bitdefender') !== false) {
+                                            $isSvg = true; $slug = 'bitdefender'; $fgColor = 'ffffff'; $bgColor = '#ED1C24';
+                                        }
+                                        elseif (strpos($source, 'mega') !== false) {
+                                            $isSvg = true; $slug = 'mega'; $fgColor = 'ffffff'; $bgColor = '#D9272E';
+                                        }
+                                        elseif (strpos($source, 'vault') !== false || strpos($source, 'vaultwarden') !== false) {
+                                            $isSvg = true; $slug = 'vaultwarden'; $fgColor = 'ffffff'; $bgColor = '#000000';
+                                        }
+                                        elseif (strpos($source, 'bolt') !== false || strpos($source, 'passbolt') !== false) {
+                                            $isSvg = true; $slug = 'passbolt'; $fgColor = 'D40101'; $bgColor = '#FAE5E5';
+                                        }
+                                        elseif (strpos($source, 'kaspersky') !== false) {
+                                            $isSvg = true; $slug = 'kaspersky'; $fgColor = 'ffffff'; $bgColor = '#006D5C';
+                                        }
+                                        elseif (strpos($source, 'nextcloud') !== false) {
+                                            $isSvg = true; $slug = 'nextcloud'; $fgColor = '0082C9'; $bgColor = '#E5F2F9';
+                                        }
+
+                                        // Set SVG Content jika match
+                                        if ($isSvg) {
+                                            $iconUrl = "https://cdn.simpleicons.org/$slug/$fgColor";
+                                            $iconContent = "<img src='$iconUrl' style='width:24px; height:24px; display:block;'>";
+                                            // Tambah hash untuk CSS color container
+                                            if(strpos($fgColor, '#') === false && strlen($fgColor) <= 6) {
+                                                $fgColor = '#' . $fgColor; 
+                                            }
+                                        }
+                                    }
                             ?>
                             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 15px; padding-bottom: 15px; border-bottom: 1px solid #f3f4f6;">
                                 <div style="display:flex; align-items:center;">
-                                    <div style="width:40px; height:40px; background:<?php echo $bgColor; ?>; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:<?php echo $iconColor; ?>;">
-                                        <i class='bx <?php echo $iconClass; ?>' style="font-size:1.4rem;"></i>
+                                    <div style="width:40px; height:40px; background:<?php echo $bgColor; ?>; border-radius:50%; display:flex; align-items:center; justify-content:center; margin-right:15px; color:<?php echo $fgColor; ?>;">
+                                        <?php echo $iconContent; ?>
                                     </div>
                                     <div>
-                                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);"><?php echo $source; ?></div>
+                                        <div style="font-weight:600; font-size:0.95rem; color:var(--text-main);"><?php echo $sourceRaw; ?></div>
                                         <div style="font-size:0.8rem; color:var(--text-muted);">Dibuat: <?php echo $pk_date; ?></div>
                                     </div>
                                 </div>
@@ -606,7 +706,7 @@ if (isset($_POST['send_logs_email'])) {
                             else: 
                             ?>
                                 <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
-                                    No Passkeys are saved yet. Click "+" to add one.
+                                    Belum ada Passkey Tersimpan. Klik "+" untuk menambahkannya.
                                 </div>
                             <?php endif; ?>
                         </div>
