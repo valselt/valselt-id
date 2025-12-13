@@ -1,79 +1,83 @@
 <?php
 require 'config.php';
-// use PragmaRX\Google2FA\Google2FA; // Pastikan library ini diload jika belum di config.php
+// use PragmaRX\Google2FA\Google2FA; 
 
-// Jika user belum login (di tahap pre-2fa), tendang ke login
 if (!isset($_SESSION['pre_2fa_user_id'])) {
-    header("Location: login.php");
-    exit();
+    header("Location: login.php"); exit();
 }
 
 $error_msg = "";
+$show_backup_input = false; // Flag untuk toggle tampilan
+
+// Cek Mode Input (OTP atau Backup)
+if (isset($_GET['use_backup'])) {
+    $show_backup_input = true;
+}
 
 if (isset($_POST['verify_2fa'])) {
-    $code = $_POST['otp_code'];
     $uid = $_SESSION['pre_2fa_user_id'];
     
-    // Ambil secret dari DB
-    $q = $conn->query("SELECT two_factor_secret, is_2fa_enabled FROM users WHERE id='$uid'");
+    // Ambil secret dan backup code dari DB
+    $q = $conn->query("SELECT two_factor_secret, two_factor_backup FROM users WHERE id='$uid'");
     $u = $q->fetch_assoc();
     
-    $google2fa = new \PragmaRX\Google2FA\Google2FA();
+    $is_valid = false;
     
-    if ($google2fa->verifyKey($u['two_factor_secret'], $code)) {
-        // --- KODE BENAR ---
+    // 1. Verifikasi Kode Backup (Jika input backup diisi)
+    if (isset($_POST['backup_code']) && !empty($_POST['backup_code'])) {
+        $input_backup = trim($_POST['backup_code']);
         
-        // 1. Pindahkan Session Sementara ke Session Utama (Login Resmi)
+        // Bandingkan kode backup (Case-sensitive atau tidak, tergantung preferensi. Biasanya Case-Sensitive)
+        if ($input_backup === $u['two_factor_backup']) {
+            $is_valid = true;
+            // Opsi: Regenerate backup code baru setelah dipakai (One-time use) - Disini kita biarkan tetap (Multi-use)
+            // Atau log spesifik: "Login menggunakan Kode Backup"
+            logActivity($conn, $uid, "Login menggunakan Kode Backup 2FA");
+        }
+    } 
+    
+    // 2. Verifikasi Authenticator (Jika input OTP diisi)
+    elseif (isset($_POST['otp_code']) && !empty($_POST['otp_code'])) {
+        $code = $_POST['otp_code'];
+        $google2fa = new \PragmaRX\Google2FA\Google2FA();
+        if ($google2fa->verifyKey($u['two_factor_secret'], $code)) {
+            $is_valid = true;
+        }
+    }
+
+    if ($is_valid) {
+        // --- LOGIN SUKSES ---
         $_SESSION['valselt_user_id'] = $uid;
         logUserDevice($conn, $uid);
-        // Ambil data user lengkap untuk session lain (username, dll) jika perlu
+        
         $qu = $conn->query("SELECT username FROM users WHERE id='$uid'");
         $userData = $qu->fetch_assoc();
         $_SESSION['valselt_username'] = $userData['username'];
         
-        // 2. Hapus Session Sementara
         unset($_SESSION['pre_2fa_user_id']);
-        unset($_SESSION['pre_2fa_remember']); // Hapus flag remember 2fa
+        unset($_SESSION['pre_2fa_remember']);
         
-        // 3. Cek "Trust This Device" (1 Bulan / 6 Bulan)
+        // Trust Device Logic
         if (isset($_POST['trust_device'])) {
-            $days = 30; // Default 1 bulan (Login Biasa)
+            $days = 30; 
             if (isset($_SESSION['login_method']) && ($_SESSION['login_method'] == 'google' || $_SESSION['login_method'] == 'github')) {
-                $days = 180; // 6 bulan untuk SSO
+                $days = 180; 
             }
-            
-            // Buat Token Cookie Khusus 2FA
             $token2fa = bin2hex(random_bytes(32));
             $expiry = time() + (86400 * $days);
-            
-            // Simpan token di tabel user_devices (atau tabel khusus 2fa_tokens jika mau dipisah)
-            // Disini kita simpan di tabel user_devices kolom 'two_factor_token' (PERLU NAMBAH KOLOM)
-            // ATAU Cara Simpel: Simpan di cookie browser saja dengan hash user_id (Kurang aman tapi umum)
-            
-            // Cara Lebih Aman: Update tabel user_devices yang baru saja dibuat saat login
-            // Kita butuh ID device terakhir. Karena logic logUserDevice dijalankan saat pre-login, 
-            // kita asumsikan device terakhir adalah yang aktif.
-            
-            // Set cookie di browser
             setcookie('valselt_2fa_trusted', $token2fa, $expiry, "/", "", false, true);
-            
-            // Simpan hash token di DB (Tabel users atau user_devices)
-            // Untuk kemudahan, kita update kolom di user_devices yang sesi-nya aktif
             $sess_id = session_id();
             $conn->query("UPDATE user_devices SET two_factor_token='$token2fa' WHERE session_id='$sess_id'");
         }
         
-        // 4. Handle Remember Me (Login Biasa)
-        // Jika user mencentang "Remember Me" di halaman login awal
+        // Remember Me Logic
         if (isset($_SESSION['login_remember_me']) && $_SESSION['login_remember_me'] == true) {
              handleRememberMe($conn, $uid);
              unset($_SESSION['login_remember_me']);
         }
         
-        // 5. Redirect ke Index (atau target awal)
+        // Redirect Logic
         $target = isset($_SESSION['sso_redirect_to']) ? $_SESSION['sso_redirect_to'] : 'index.php';
-        
-        // Jika SSO Redirect, proses token dulu
         if (isset($_SESSION['sso_redirect_to'])) {
              processSSORedirect($conn, $uid, $target); 
         } else {
@@ -83,10 +87,13 @@ if (isset($_POST['verify_2fa'])) {
         
     } else {
         $error_msg = "Kode salah! Silakan coba lagi.";
+        // Tetap di mode backup jika tadi error di mode backup
+        if (isset($_POST['backup_code'])) {
+            $show_backup_input = true;
+        }
     }
 }
 
-// Tentukan Durasi Trust Device untuk Teks UI
 $trustDuration = "1 bulan";
 if (isset($_SESSION['login_method']) && ($_SESSION['login_method'] == 'google' || $_SESSION['login_method'] == 'github')) {
     $trustDuration = "6 bulan";
@@ -117,10 +124,18 @@ if (isset($_SESSION['login_method']) && ($_SESSION['login_method'] == 'google' |
 
     <div class="auth-card">
         <div class="auth-icon"><i class='bx bx-shield-quarter'></i></div>
-        <h2 style="margin-bottom: 10px; font-weight: 700;">Verifikasi 2 Langkah</h2>
-        <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 30px;">
-            Masukkan 6 digit kode dari aplikasi Authenticator Anda.
-        </p>
+        
+        <?php if($show_backup_input): ?>
+            <h2 style="margin-bottom: 10px; font-weight: 700;">Two-Step Verification</h2>
+            <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 30px;">
+                Enter your 32-character recovery code.
+            </p>
+        <?php else: ?>
+            <h2 style="margin-bottom: 10px; font-weight: 700;">Two-Step Verification</h2>
+            <p style="color: #6b7280; font-size: 0.9rem; margin-bottom: 30px;">
+                Enter the 6-digit code from your authenticator app to continue.
+            </p>
+        <?php endif; ?>
 
         <?php if($error_msg): ?>
             <div style="background: #fef2f2; color: #b91c1c; padding: 10px; border-radius: 6px; font-size: 0.85rem; margin-bottom: 20px; border: 1px solid #fecaca;">
@@ -129,7 +144,11 @@ if (isset($_SESSION['login_method']) && ($_SESSION['login_method'] == 'google' |
         <?php endif; ?>
 
         <form method="POST">
-            <input type="text" name="otp_code" class="form-control otp-input" placeholder="000000" maxlength="6" required autofocus>
+            <?php if($show_backup_input): ?>
+                <input type="text" name="backup_code" class="form-control" placeholder="Masukkan Kode Backup" style="text-align:center; font-size:1.1rem; letter-spacing:1px;" required autofocus>
+            <?php else: ?>
+                <input type="text" name="otp_code" class="form-control otp-input" placeholder="000000" maxlength="6" required autofocus>
+            <?php endif; ?>
             
             <label class="trust-option">
                 <input type="checkbox" name="trust_device" value="1" checked>
@@ -139,7 +158,17 @@ if (isset($_SESSION['login_method']) && ($_SESSION['login_method'] == 'google' |
             <button type="submit" name="verify_2fa" class="btn-verify">Verifikasi</button>
         </form>
         
-        <div style="margin-top: 20px;">
+        <div style="margin-top: 20px; display:flex; flex-direction:column; gap:10px;">
+            <?php if($show_backup_input): ?>
+                <a href="verify2fa.php" style="color: #0284c7; font-size: 0.9rem; text-decoration: none; font-weight:600;">
+                    Gunakan Authenticator App
+                </a>
+            <?php else: ?>
+                <a href="verify2fa.php?use_backup=1" style="color: #0284c7; font-size: 0.9rem; text-decoration: none; font-weight:600;">
+                    Gunakan Kode Backup
+                </a>
+            <?php endif; ?>
+            
             <a href="login.php" style="color: #6b7280; font-size: 0.85rem; text-decoration: none;">Kembali ke Login</a>
         </div>
     </div>

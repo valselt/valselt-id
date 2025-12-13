@@ -764,7 +764,7 @@ if (isset($_POST['send_logs_email'])) {
                             else: 
                             ?>
                                 <div style="text-align:center; padding:20px; color:var(--text-muted); font-size:0.9rem;">
-                                    Belum ada Passkey Tersimpan. Klik "+" untuk menambahkannya.
+                                    No Passkeys are saved yet. Click “+” to add one.
                                 </div>
                             <?php endif; ?>
                         </div>
@@ -1100,7 +1100,7 @@ if (isset($_POST['send_logs_email'])) {
 <div class="popup-overlay" id="modalDisable2FA" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box error"><i class='bx bx-lock-open'></i></div>
-        <h3 class="popup-title">Disable Authenticator?</h3>
+        <h3 class="popup-title">Disable Two-Step Verification?</h3>
         <p class="popup-message">Enter the 6-digit code from your authenticator app to confirm.</p>
         
         <div class="form-group">
@@ -1315,7 +1315,7 @@ if (isset($_POST['send_logs_email'])) {
 <div class="popup-overlay" id="modalVerify2FAAction" style="display:none; opacity:0; transition: opacity 0.3s;">
     <div class="popup-box">
         <div class="popup-icon-box warning"><i class='bx bx-shield-quarter'></i></div>
-        <h3 class="popup-title">Authentication Verification</h3>
+        <h3 class="popup-title">Two-Step Verification</h3>
         <p class="popup-message">For security reasons, an additional verification is required because an authenticator is enabled on your account. Please enter the verification code to continue.</p>
         
         <input type="text" id="2fa_action_input" class="form-control" placeholder="000000" style="text-align:center; letter-spacing:5px; font-size:1.2rem; margin-bottom:10px;" maxlength="6">
