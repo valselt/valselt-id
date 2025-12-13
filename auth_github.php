@@ -3,7 +3,7 @@ require 'config.php';
 
 // Jika tidak ada code, tendang kembali
 if (!isset($_GET['code'])) {
-    header("Location: login.php");
+    header("Location: login");
     exit();
 }
 
@@ -94,7 +94,7 @@ if (isset($_SESSION['valselt_user_id'])) {
         // Error: Akun GitHub ini milik orang lain
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Akun GitHub ini sudah terhubung ke pengguna lain!';
-        header("Location: index.php");
+        header("Location: index");
         exit();
     }
 
@@ -106,7 +106,7 @@ if (isset($_SESSION['valselt_user_id'])) {
     handleRememberMe($conn, $current_user_id);
     $_SESSION['popup_status'] = 'success';
     $_SESSION['popup_message'] = 'Akun GitHub berhasil ditautkan!';
-    header("Location: index.php");
+    header("Location: index");
     exit();
 }
 
@@ -132,7 +132,7 @@ else {
                 $_SESSION['login_method'] = 'github';
                 logUserDevice($conn, $uid);
                 logActivity($conn, $uid, "Login GitHub: Meminta Verifikasi 2FA");
-                header("Location: verify2fa.php");
+                header("Location: verify2fa");
                 exit();
             }
         } else {
@@ -161,7 +161,7 @@ else {
                     $_SESSION['login_method'] = 'github';
                     logUserDevice($conn, $uid);
                     logActivity($conn, $uid, "Login GitHub (Link Email): Meminta Verifikasi 2FA");
-                    header("Location: verify2fa.php");
+                    header("Location: verify2fa");
                     exit();
                 }
             } else {
@@ -193,7 +193,7 @@ else {
                 logUserDevice($conn, $new_id);
                 handleRememberMe($conn, $new_id);
                 
-                header("Location: index.php");
+                header("Location: index");
                 exit();
             } else {
                 die("Gagal mendaftar ke database. Error: " . $conn->error);
@@ -211,7 +211,7 @@ function doGithubLogin($row, $conn, $deviceInfo) {
     logUserDevice($conn, $row['id']);
     handleRememberMe($conn, $row['id']);
     
-    header("Location: index.php");
+    header("Location: index");
     exit();
 }
 ?>

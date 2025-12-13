@@ -638,7 +638,7 @@ function processSSORedirect($conn, $uid, $target) {
         $conn->query("UPDATE users SET auth_token='$token' WHERE id='$uid'");
         header("Location: " . $target . "?token=" . $token);
     } else {
-        header("Location: index.php");
+        header("Location: index");
     }
     exit();
 }

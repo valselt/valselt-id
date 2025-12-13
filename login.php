@@ -25,7 +25,7 @@ if ($is_logged_in) {
     $user_info = $q->fetch_assoc();
     
     if (empty($redirect_to)) {
-        header("Location: index.php");
+        header("Location: index");
         exit();
     }
 }
@@ -42,7 +42,7 @@ if (isset($_POST['login'])) {
                 $_SESSION['verify_email'] = $row['email'];
                 $_SESSION['popup_status'] = 'warning';
                 $_SESSION['popup_message'] = 'Akun belum aktif. Masukkan OTP.';
-                $_SESSION['popup_redirect'] = 'verify.php';
+                $_SESSION['popup_redirect'] = 'verify';
             } else {
                 // ==========================================
                 // MODIFIKASI LOGIKA 2FA DI SINI
@@ -71,7 +71,7 @@ if (isset($_POST['login'])) {
                         logUserDevice($conn, $uid); 
                         logActivity($conn, $uid, "Login Manual: Meminta Verifikasi 2FA");
                         
-                        header("Location: verify2fa.php");
+                        header("Location: verify2fa");
                         exit();
                     }
                 } else {
@@ -174,7 +174,7 @@ function doLogin($row, $redirect_to, $conn) {
                     </form>
 
                     <div class="auth-links">
-                        <a href="logout.php?continue=<?php echo urlencode('login.php?redirect_to='.$redirect_to); ?>">
+                        <a href="logout?continue=<?php echo urlencode('login?redirect_to='.$redirect_to); ?>">
                             Gunakan Akun Lain
                         </a>
                     </div>
@@ -226,7 +226,7 @@ function doLogin($row, $redirect_to, $conn) {
                     </div>
                     
                     <div class="auth-links">
-                        Don't have an account? <a href="register.php">Sign Up</a>
+                        Don't have an account? <a href="register">Sign Up</a>
                     </div>
                 <?php endif; ?>
 

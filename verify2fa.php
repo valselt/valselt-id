@@ -3,7 +3,7 @@ require 'config.php';
 // use PragmaRX\Google2FA\Google2FA; 
 
 if (!isset($_SESSION['pre_2fa_user_id'])) {
-    header("Location: login.php"); exit();
+    header("Location: login"); exit();
 }
 
 $error_msg = "";
@@ -81,7 +81,7 @@ if (isset($_POST['verify_2fa'])) {
         if (isset($_SESSION['sso_redirect_to'])) {
              processSSORedirect($conn, $uid, $target); 
         } else {
-             header("Location: index.php");
+             header("Location: index");
         }
         exit();
         
@@ -160,16 +160,16 @@ if (isset($_SESSION['login_method']) && ($_SESSION['login_method'] == 'google' |
         
         <div style="margin-top: 20px; display:flex; flex-direction:column; gap:10px;">
             <?php if($show_backup_input): ?>
-                <a href="verify2fa.php" style="color: #0284c7; font-size: 0.9rem; text-decoration: none; font-weight:600;">
+                <a href="verify2fa" style="color: #0284c7; font-size: 0.9rem; text-decoration: none; font-weight:600;">
                     Gunakan Authenticator App
                 </a>
             <?php else: ?>
-                <a href="verify2fa.php?use_backup=1" style="color: #0284c7; font-size: 0.9rem; text-decoration: none; font-weight:600;">
+                <a href="verify2fa?use_backup=1" style="color: #0284c7; font-size: 0.9rem; text-decoration: none; font-weight:600;">
                     Gunakan Kode Backup
                 </a>
             <?php endif; ?>
             
-            <a href="login.php" style="color: #6b7280; font-size: 0.85rem; text-decoration: none;">Kembali ke Login</a>
+            <a href="login" style="color: #6b7280; font-size: 0.85rem; text-decoration: none;">Kembali ke Login</a>
         </div>
     </div>
 

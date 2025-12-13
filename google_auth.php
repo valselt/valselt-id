@@ -35,7 +35,7 @@ if (isset($_GET['code'])) {
                 $_SESSION['popup_status'] = 'error';
                 $_SESSION['popup_message'] = 'Gagal menautkan akun (Mungkin email Google ini sudah dipakai akun lain).';
             }
-            header("Location: index.php");
+            header("Location: index");
             exit();
         }
 
@@ -95,14 +95,14 @@ if (isset($_GET['code'])) {
                 } else {
                     $_SESSION['popup_status'] = 'error';
                     $_SESSION['popup_message'] = 'Gagal Register via Google.';
-                    header("Location: login.php");
+                    header("Location: login");
                 }
             }
         }
     } else {
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Gagal Login Google.';
-        header("Location: login.php");
+        header("Location: login");
     }
 }
 
@@ -123,7 +123,7 @@ function loginUser($user, $redirect_to, $conn) {
             // TRUSTED -> Login Langsung
             executeLogin($user, $redirect_to, $conn, 'google');
         } else {
-            // TIDAK TRUSTED -> Redirect ke verify2fa.php
+            // TIDAK TRUSTED -> Redirect ke verify2fa
             $_SESSION['pre_2fa_user_id'] = $uid;
             $_SESSION['login_method'] = 'google'; // Set durasi trust 6 bulan
             
@@ -136,7 +136,7 @@ function loginUser($user, $redirect_to, $conn) {
             logUserDevice($conn, $uid);
             logActivity($conn, $uid, "Login Google: Meminta Verifikasi 2FA");
             
-            header("Location: verify2fa.php");
+            header("Location: verify2fa");
             exit();
         }
     } else {

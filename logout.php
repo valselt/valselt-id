@@ -32,7 +32,7 @@ if (isset($_COOKIE['remember_token'])) {
 if (isset($_GET['continue'])) {
     header("Location: " . $_GET['continue']);
 } else {
-    header("Location: login.php");
+    header("Location: login");
 }
 exit();
 ?>

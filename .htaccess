@@ -1,0 +1,10 @@
+RewriteEngine On
+
+# 1. Jika user mengetik .php manual, paksa redirect ke versi tanpa .php (Untuk SEO & Kerapihan)
+RewriteCond %{THE_REQUEST} \s/+(.+?)\.php[\s?] [NC]
+RewriteRule ^ /%1 [R=301,L,NE]
+
+# 2. Sembunyikan ekstensi .php secara internal
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteCond %{REQUEST_FILENAME}.php -f
+RewriteRule ^(.+?)/?$ $1.php [L]
