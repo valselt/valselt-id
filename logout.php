@@ -28,11 +28,16 @@ if (isset($_COOKIE['remember_token'])) {
     unset($_COOKIE['remember_token']);
 }
 
-// Cek apakah ada permintaan redirect khusus setelah logout
 if (isset($_GET['continue'])) {
-    header("Location: " . $_GET['continue']);
-} else {
-    header("Location: login");
+    $target = base64_decode($_GET['continue'], true);
+
+    // Validasi hasil decode
+    if ($target !== false && strpos($target, 'login') === 0) {
+        header("Location: " . $target);
+        exit();
+    }
 }
+
+// fallback aman
+header("Location: login");
 exit();
-?>
