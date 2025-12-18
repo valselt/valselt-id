@@ -320,10 +320,10 @@ function doLogin($row, $redirect_to, $conn) {
                     </div>
 
                     <div style="display: flex; flex-direction: column; gap: 10px;">
-                        <a href="<?php echo $google_client->createAuthUrl(); ?>" class="btn-google">
+                        <button type="button" onclick="openGoogleLogin()" class="btn-google" style="font-size:1rem; cursor:pointer;">
                             <img src="https://www.svgrepo.com/show/475656/google-color.svg" alt="G" style="width:20px; margin-right:10px;">
                             Sign in with Google
-                        </a>
+                        </button>
 
                         <a href="<?php echo $github_auth_url; ?>" class="btn-social">
                             <i class='bx bxl-github' style="font-size:1.4rem; color:#24292e; margin-right:10px;"></i>
@@ -652,6 +652,44 @@ function doLogin($row, $redirect_to, $conn) {
             el.style.opacity = '0';
             box.style.transform = 'scale(0.95) translateY(10px)';
             setTimeout(() => el.style.display = 'none', 300);
+        }
+
+        // --- GOOGLE OAUTH POPUP LOGIC ---
+        function openGoogleLogin() {
+            // Ambil URL Auth dari PHP (Disuntikkan ke variabel JS)
+            const googleAuthUrl = "<?php echo $google_client->createAuthUrl(); ?>";
+            
+            // Hitung posisi tengah layar
+            const width = 500;
+            const height = 600;
+            const left = (window.screen.width / 2) - (width / 2);
+            const top = (window.screen.height / 2) - (height / 2);
+            
+            // Buka Popup
+            const popup = window.open(
+                googleAuthUrl, 
+                "Google Login", 
+                `width=${width},height=${height},top=${top},left=${left},scrollbars=yes`
+            );
+
+            // Monitor Popup (Polling)
+            const timer = setInterval(() => {
+                if (popup.closed) {
+                    clearInterval(timer);
+                    // Popup tertutup -> Cek apakah login berhasil (Reload Halaman Utama)
+                    // Kita reload ke diri sendiri, nanti PHP di atas akan mengecek $_SESSION['valselt_user_id']
+                    location.reload(); 
+                }
+            }, 500);
+
+            // (Opsional) Listener Pesan dari Popup (Jika ingin lebih canggih tanpa polling)
+            window.addEventListener('message', function(event) {
+                if (event.data === 'google_login_success') {
+                    clearInterval(timer);
+                    popup.close();
+                    location.reload();
+                }
+            });
         }
     </script>
     <?php include 'popupcustom.php'; ?>

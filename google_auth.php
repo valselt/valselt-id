@@ -146,15 +146,81 @@ function loginUser($user, $redirect_to, $conn) {
 }
 
 // Fungsi Eksekusi Login Final (Login Sukses)
+// Fungsi Eksekusi Login Final (Login Sukses via Google Popup)
 function executeLogin($user, $redirect_to, $conn, $method) {
+    // 1. Set Session Utama
     $_SESSION['valselt_user_id'] = $user['id'];
     $_SESSION['valselt_username'] = $user['username'];
     
+    // 2. Catat Log & Device
     handleRememberMe($conn, $user['id']);
     logActivity($conn, $user['id'], "Login Berhasil menggunakan $method di perangkat " . getDeviceName());
     logUserDevice($conn, $user['id']);
     
-    processSSORedirect($conn, $user['id'], $redirect_to);
+    // 3. Simpan Redirect URL ke Session (PENTING untuk SSO)
+    // Agar saat window induk reload, dia tahu harus lanjut kemana
+    if (!empty($redirect_to)) {
+        $_SESSION['sso_redirect_to'] = $redirect_to;
+    }
+
+    // 4. Output Script Penutup Popup
+    // Script ini akan me-reload halaman 'login.php' yang ada di belakang popup.
+    // Karena session sudah terbentuk di langkah 1, saat login.php reload, 
+    // dia akan otomatis masuk ke dashboard atau halaman "Lanjutkan SSO".
+    echo '
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Login Success</title>
+        <style>
+            body { 
+                font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+                background-color: #f9fafb; 
+                height: 100vh; 
+                margin: 0; 
+                display: flex; 
+                flex-direction: column; 
+                align-items: center; 
+                justify-content: center; 
+                color: #374151;
+            }
+            .loader {
+                border: 3px solid #e5e7eb;
+                border-top: 3px solid #10b981;
+                border-radius: 50%;
+                width: 24px;
+                height: 24px;
+                animation: spin 1s linear infinite;
+                margin-bottom: 15px;
+            }
+            @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        </style>
+    </head>
+    <body>
+        <div class="loader"></div>
+        <p style="font-size: 0.9rem; font-weight: 500;">Signing you in...</p>
+        
+        <script>
+            // Cek apakah halaman ini dibuka di dalam popup (memiliki opener)
+            if (window.opener) {
+                // 1. Reload halaman induk (login.php)
+                // Ini akan memicu cek session di login.php -> User masuk
+                window.opener.location.reload();
+                
+                // 2. Tutup popup ini
+                window.close();
+            } else {
+                // Fallback: Jika user membuka link ini di tab baru (bukan popup)
+                // Redirect langsung ke dashboard
+                window.location.href = "./"; 
+            }
+        </script>
+    </body>
+    </html>
+    ';
+    exit();
 }
 
 ?>
