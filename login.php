@@ -272,7 +272,19 @@ function doLogin($row, $redirect_to, $conn) {
                         <?php
                         $continue = base64_encode('login?redirect_to='.$redirect_to);
                         ?>
-                        <a href="logout?continue=<?php echo urlencode($continue); ?>">
+                        <?php
+                            // 1. Siapkan URL tujuan: 'login?redirect_to=...'
+                            // Kita encode $redirect_to lagi agar aman saat dikirim kembali ke login
+                            $next_target = 'login';
+                            if (!empty($redirect_to)) {
+                                // Encode redirect_to agar aman di URL
+                                $next_target .= '?redirect_to=' . base64_encode($redirect_to);
+                            }
+                            
+                            // 2. Encode SELURUH URL tujuan logout agar server tidak memblokir
+                            $encoded_continue = base64_encode($next_target);
+                        ?>
+                        <a href="logout?continue=<?php echo $encoded_continue; ?>">
                             Gunakan Akun Lain
                         </a>
                     </div>

@@ -28,16 +28,24 @@ if (isset($_COOKIE['remember_token'])) {
     unset($_COOKIE['remember_token']);
 }
 
-if (isset($_GET['continue'])) {
-    $target = base64_decode($_GET['continue'], true);
+$target = 'login'; // Default fallback
 
-    // Validasi hasil decode
-    if ($target !== false && strpos($target, 'login') === 0) {
-        header("Location: " . $target);
-        exit();
+if (isset($_GET['continue'])) {
+    $cont = $_GET['continue'];
+    
+    // Cek 1: Apakah ini Base64? (Tidak ada http di awal)
+    if (strpos($cont, 'http') === false) {
+        $decoded = base64_decode($cont, true);
+        // Cek 2: Hasil decode valid & aman (diawali 'login')
+        if ($decoded !== false && strpos($decoded, 'login') === 0) {
+            $target = $decoded;
+        }
+    } 
+    // Fallback: Jika string biasa (tapi ini yg bikin error, jadi kita utamakan base64)
+    elseif (strpos($cont, 'login') === 0) {
+        $target = $cont;
     }
 }
 
-// fallback aman
-header("Location: login");
+header("Location: " . $target);
 exit();
