@@ -68,10 +68,6 @@ if (isset($_POST['confirm_access'])) {
     header("Location: " . $return_url);
     exit();
 }
-
-$auth_url = 'authorize.php?' . $_SERVER['QUERY_STRING'];
-$login_target = 'login?redirect_to=' . base64_encode($auth_url);
-$logout_target = base64_encode($login_target);
 ?>
 
 <!DOCTYPE html>
@@ -83,6 +79,59 @@ $logout_target = base64_encode($login_target);
     <link rel="icon" type="image/png" href="https://cdn.ivanaldorino.web.id/valselt/valselt_favicon.png">
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
+    <style>
+        /* CSS Khusus untuk Authorize Page agar sesuai permintaan */
+        
+        /* 1. Foto Profil Bulat */
+        .ac-avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%; /* Membuat bulat sempurna */
+            object-fit: cover;
+            margin-bottom: 10px;
+        }
+
+        /* Avatar Placeholder juga bulat */
+        .avatar-placeholder {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            margin-bottom: 10px;
+            background: #f3f4f6; /* Warna placeholder */
+        }
+
+        /* 2. Email Tebal Medium */
+        .ac-email {
+            font-weight: 500; /* Medium weight */
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        /* Penyesuaian layout kartu agar centered seperti screenshot Anda */
+        .account-chooser-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            padding: 30px;
+            background: #f9fafb; /* Latar belakang kartu sedikit abu */
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            cursor: default;
+        }
+        
+        .ac-username {
+            font-weight: 600;
+            font-size: 1.1rem;
+            margin-bottom: 2px;
+            color: var(--text-main);
+        }
+
+    </style>
 </head>
 <body>
     
@@ -118,16 +167,18 @@ $logout_target = base64_encode($login_target);
             <div class="auth-box">
 
                 <div class="auth-header">
-                    <h2>Authorize App</h2>
-                    <p><strong><?php echo htmlspecialchars($app['app_name']); ?></strong> ingin mengakses akun Anda.</p>
+                    <h2 style="font-family: var(--font-serif); font-size: 2.5rem; margin-bottom: 10px;">Authorize App</h2>
+                    <p style="font-size: 1rem; color: var(--text-muted);">
+                        <strong><?php echo htmlspecialchars($app['app_name']); ?></strong> ingin mengakses akun Anda.
+                    </p>
                 </div>
                 
                 <form method="POST">
-                    <div class="account-chooser-card" style="margin-bottom: 20px; cursor: default;">
+                    <div class="account-chooser-card">
                         <?php if($user_info['profile_pic']): ?>
                             <img src="<?php echo $user_info['profile_pic']; ?>" class="ac-avatar">
                         <?php else: ?>
-                            <div class="ac-avatar avatar-placeholder" style="width:70px; height:70px; display:flex; align-items:center; justify-content:center; font-size:1.5rem;">
+                            <div class="avatar-placeholder">
                                 <?php echo strtoupper(substr($user_info['username'], 0, 2)); ?>
                             </div>
                         <?php endif; ?>
@@ -136,7 +187,7 @@ $logout_target = base64_encode($login_target);
                         <div class="ac-email"><?php echo htmlspecialchars($user_info['email']); ?></div>
                     </div>
 
-                    <div style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 30px; text-align: center; line-height: 1.6;">
+                    <div style="font-size: 0.9rem; color: var(--text-muted); margin: 25px 0; text-align: center; line-height: 1.6;">
                         Aplikasi ini akan dapat melihat <strong>profil publik</strong> dan <strong>alamat email</strong> Anda.
                     </div>
 
@@ -145,11 +196,18 @@ $logout_target = base64_encode($login_target);
                             Batal
                         </a>
 
-                        <button type="submit" name="confirm_access" class="btn-continue" style="flex: 1; margin: 0; width: auto; justify-content: center;">
+                        <button type="submit" name="confirm_access" class="btn-continue" style="flex: 1; margin: 0; width: auto; justify-content: center; border-radius: 12px;">
                             Izinkan <i class='bx bx-check'></i>
                         </button>
                     </div>
                 </form>
+
+                <?php
+                    // URL Logout Khusus
+                    $auth_url = 'authorize.php?' . $_SERVER['QUERY_STRING'];
+                    $login_target = 'login?redirect_to=' . base64_encode($auth_url);
+                    $logout_target = base64_encode($login_target);
+                ?>
 
                 <div class="auth-links" style="margin-top: 30px;">
                     <a href="logout?continue=<?php echo $logout_target; ?>">
@@ -162,7 +220,7 @@ $logout_target = base64_encode($login_target);
     </div>
 
     <script>
-        // --- SCRIPT CAROUSEL LOGIC (SAMA DENGAN LOGIN.PHP) ---
+        // --- SCRIPT CAROUSEL LOGIC ---
         document.addEventListener("DOMContentLoaded", function() {
             const slides = document.querySelectorAll('.carousel-slide');
             const indicatorsContainer = document.getElementById('carousel-indicators');
