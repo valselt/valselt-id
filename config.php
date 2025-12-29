@@ -643,7 +643,16 @@ function processSSORedirect($conn, $uid, $target) {
         $decoded = base64_decode($target, true);
         if ($decoded) $target = $decoded;
     }
+
     if (!empty($target)) {
+        // --- TAMBAHAN BARU: CEK INTERNAL REDIRECT (OAUTH FLOW) ---
+        // Jika targetnya adalah 'authorize.php' atau halaman internal lain,
+        // Langsung redirect saja tanpa generate token legacy.
+        // Biarkan authorize.php yang mengurus token OAuth nanti.
+        if (strpos($target, 'authorize.php') !== false || strpos($target, '/') === 0) {
+             header("Location: " . $target);
+             exit();
+        }   
         // 1. Ambil Nama Domain/App dari URL Target
         $parsed = parse_url($target);
         $host = isset($parsed['host']) ? $parsed['host'] : $target;
