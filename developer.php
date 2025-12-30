@@ -118,7 +118,56 @@ if (isset($_POST['delete_app_id'])) {
         .btn-copy { background: transparent; border: none; cursor: pointer; color: #9ca3af; font-size: 1.2rem; padding: 4px; border-radius: 6px; transition: all 0.2s; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
         .btn-copy:hover { color: #000; background: #e5e7eb; }
 
-        /* === UPDATE: TUTORIAL & CODE SNIPPET STYLE === */
+        /* === MODAL & FLOATING SCROLLBAR FIX === */
+        .popup-box {
+            background: white;
+            padding: 30px; 
+            border-radius: 16px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            text-align: center;
+            width: 400px; 
+            max-width: 90%;
+            transform: scale(0.95) translateY(10px);
+            opacity: 0;
+            transition: all 0.3s cubic-bezier(0.4, 0.0, 0.2, 1);
+        }
+
+        #modalTutorial {
+            align-items: flex-start; /* ⬅️ BUKAN center */
+            padding-top: 40px;
+            padding-bottom: 40px;
+        }
+
+        #modalTutorial .popup-box {
+            width: 800px;              /* ⬅️ bikin “niat” */
+            max-width: 95vw;
+            min-height: 60vh;          /* ⬅️ ini kuncinya */
+            max-height: calc(100vh - 80px);
+
+            overflow-y: auto;
+            overflow-x: hidden;
+        }
+
+
+        #modalTutorial .popup-box::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        #modalTutorial .popup-box::-webkit-scrollbar-track {
+            margin: 20px 0; /* cukup, tidak berlebihan */
+        }
+
+        #modalTutorial .popup-box::-webkit-scrollbar-thumb {
+            background: #d1d5db;
+            border-radius: 20px;
+        }
+
+
+        #modalTutorial .popup-box::-webkit-scrollbar-thumb:hover {
+            background-color: #9ca3af; 
+        }
+        /* ================================== */
+
         .tutorial-tabs { display: flex; gap: 10px; border-bottom: 1px solid #e5e7eb; padding-bottom: 15px; margin-bottom: 20px; }
         .tab-btn { background: transparent; border: none; font-weight: 600; color: var(--text-muted); cursor: pointer; padding: 8px 16px; border-radius: 30px; transition: 0.2s; }
         .tab-btn.active { background: #000; color: white; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
@@ -134,13 +183,15 @@ if (isset($_POST['delete_app_id'])) {
             overflow-x: auto;
             margin: 15px 0; 
             border: 1px solid #333;
-            /* PENTING: Menjaga format baris baru dan spasi */
             white-space: pre; 
             line-height: 1.5;
             tab-size: 4;
         }
+
+        body.modal-open {
+            overflow: hidden;
+        }
         
-        /* Pewarnaan Kode Sederhana */
         .code-var { color: #9cdcfe; }
         .code-str { color: #ce9178; }
         .code-com { color: #6a9955; }
@@ -265,7 +316,7 @@ if (isset($_POST['delete_app_id'])) {
     </div>
 
     <div class="popup-overlay" id="modalCreateApp" style="display:none; opacity:0; transition: opacity 0.3s;">
-        <div class="popup-box" style="width: 500px; max-width: 95%;">
+        <div class="popup-box">
             <div class="popup-icon-box success"><i class='bx bx-layer-plus'></i></div>
             <h3 class="popup-title">Create New App</h3>
             <p class="popup-message" style="margin-bottom:20px;">Register your application to use Valselt SSO.</p>
@@ -302,7 +353,7 @@ if (isset($_POST['delete_app_id'])) {
     </div>
 
     <div class="popup-overlay" id="modalTutorial" style="display:none; opacity:0; transition: opacity 0.3s;">
-        <div class="popup-box" style="width: 700px; max-width: 95%; max-height: 85vh; overflow-y: auto;">
+        <div class="popup-box">
             
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
                 <h3 class="popup-title" style="margin:0; text-align:left;">Integration Tutorial</h3>
@@ -324,7 +375,7 @@ if (isset($_POST['delete_app_id'])) {
                 </a>
 
                 <div class="step-title">2. Implementation (login.php)</div>
-                <div class="code-snippet">&lt;?php
+<div class="code-snippet">&lt;?php
 require <span class="code-str">'Valselt.php'</span>;
 
 <span class="code-com">// Configuration</span>
@@ -430,14 +481,41 @@ sso = Valselt(
             }
         }
         function openModal(id) {
-            const el = document.getElementById(id); const box = el.querySelector('.popup-box');
+            const el = document.getElementById(id);
+            const box = el.querySelector('.popup-box');
+
+            document.body.classList.add('modal-open'); // 🔒 lock body
+
             el.style.display = 'flex';
-            requestAnimationFrame(() => { el.style.opacity = '1'; el.style.backdropFilter = 'blur(5px)'; box.style.transform = 'scale(1) translateY(0)'; box.style.opacity = '1'; });
+            requestAnimationFrame(() => {
+                el.style.opacity = '1';
+                el.style.backdropFilter = 'blur(5px)';
+                box.style.transform = 'scale(1) translateY(0)';
+                box.style.opacity = '1';
+            });
         }
+
         function closeModal(id) {
-            const el = document.getElementById(id); const box = el.querySelector('.popup-box');
-            el.style.opacity = '0'; box.style.transform = 'scale(0.95) translateY(10px)'; setTimeout(() => el.style.display = 'none', 300);
+            const el = document.getElementById(id);
+            const box = el.querySelector('.popup-box');
+
+            document.body.classList.remove('modal-open'); // 🔓 unlock body
+
+            // Animasi keluar
+            el.style.opacity = '0';
+            el.style.backdropFilter = 'blur(0px)';
+            box.style.transform = 'scale(0.93) translateY(12px)';
+            box.style.opacity = '0';
+
+            if (id === 'modalVerify2FAAction') resetInputToOTP('action');
+            if (id === 'modalDisable2FA') resetInputToOTP('disable');
+
+            // Setelah animasi selesai → sembunyikan
+            setTimeout(() => {
+                el.style.display = 'none';
+            }, 350);
         }
+
         function openDeleteAppModal(clientId) { document.getElementById('delete_target_id').value = clientId; openModal('modalDeleteApp'); }
         function toggleSecret(btn, wrapperId) {
             const wrapper = document.getElementById(wrapperId); const isOpen = wrapper.classList.contains('open');
