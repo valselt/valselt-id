@@ -20,9 +20,21 @@ if (isset($_POST['create_app'])) {
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Semua field wajib diisi!';
     } else {
-        $clientId = bin2hex(random_bytes(20)); // 40 chars
-        $clientSecret = bin2hex(random_bytes(32)); // 64 chars
+        // --- CUSTOM CLIENT ID GENERATION ---
+        // 1. Bersihkan App Name: Huruf kecil, ganti spasi/simbol dengan '-'
+        $cleanName = preg_replace('/[^a-z0-9]+/i', '-', strtolower($appName));
+        $cleanName = trim($cleanName, '-'); // Hapus dash di awal/akhir
+        
+        // 2. Generate 6 Angka Random
+        $randomNum = rand(100000, 999999);
+        
+        // 3. Gabungkan Format: {name}-{random}-valselt-id
+        $clientId = $cleanName . '-' . $randomNum . '-valselt-id';
+        
+        // Client Secret tetap random hash panjang (keamanan)
+        $clientSecret = bin2hex(random_bytes(32)); 
 
+        // Simpan ke DB
         $stmt = $conn->prepare("INSERT INTO oauth_clients (user_id, client_id, client_secret, app_name, app_domain, redirect_uri) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("isssss", $user_id, $clientId, $clientSecret, $appName, $appDomain, $redirectUri);
 
@@ -30,8 +42,14 @@ if (isset($_POST['create_app'])) {
             $_SESSION['popup_status'] = 'success';
             $_SESSION['popup_message'] = 'Aplikasi berhasil dibuat!';
         } else {
-            $_SESSION['popup_status'] = 'error';
-            $_SESSION['popup_message'] = 'Gagal membuat aplikasi.';
+            // Handle duplicate entry (meski kecil kemungkinannya dengan 6 angka random)
+            if ($conn->errno == 1062) {
+                 $_SESSION['popup_status'] = 'error';
+                 $_SESSION['popup_message'] = 'Gagal membuat ID unik. Silakan coba lagi.';
+            } else {
+                 $_SESSION['popup_status'] = 'error';
+                 $_SESSION['popup_message'] = 'Gagal membuat aplikasi.';
+            }
         }
     }
     header("Location: developer.php");
@@ -232,6 +250,7 @@ if (isset($_POST['delete_app_id'])) {
             border-radius: 8px;
             font-family: 'Courier New', Courier, monospace;
             font-size: 0.9rem;
+            margin-top: 10px;
             border: 1px solid #e5e7eb;
             color: #b91c1c;
             filter: blur(8px);
@@ -277,7 +296,6 @@ if (isset($_POST['delete_app_id'])) {
         
         .toggle-secret:hover { 
             color: #000; 
-            
         }
         
         /* Judul Section (Flexbox untuk sejajarkan teks & tombol) */
@@ -551,10 +569,12 @@ if (isset($_POST['delete_app_id'])) {
             setTimeout(() => el.style.display = 'none', 300);
         }
 
+        // === FUNGSI BUKA MODAL DELETE ===
         function openDeleteAppModal(clientId) {
             document.getElementById('delete_target_id').value = clientId;
             openModal('modalDeleteApp');
         }
+        // =================================
 
         // UPDATE: Toggle Secret (Icon Only, Target by ID)
         function toggleSecret(btn, wrapperId) {
