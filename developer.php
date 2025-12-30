@@ -14,35 +14,29 @@ $user_data = $u_res->fetch_assoc();
 if (isset($_POST['create_app'])) {
     $appName = htmlspecialchars(trim($_POST['app_name']));
     $appDomain = htmlspecialchars(trim($_POST['app_domain']));
-    $redirectUri = htmlspecialchars(trim($_POST['redirect_uri']));
+    // $redirectUri dihapus
 
-    if (empty($appName) || empty($appDomain) || empty($redirectUri)) {
+    if (empty($appName) || empty($appDomain)) { // Validasi dikurangi
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Semua field wajib diisi!';
     } else {
         // --- CUSTOM CLIENT ID GENERATION ---
-        // 1. Bersihkan App Name: Huruf kecil, ganti spasi/simbol dengan '-'
         $cleanName = preg_replace('/[^a-z0-9]+/i', '-', strtolower($appName));
-        $cleanName = trim($cleanName, '-'); // Hapus dash di awal/akhir
+        $cleanName = trim($cleanName, '-');
         
-        // 2. Generate 6 Angka Random
         $randomNum = rand(100000, 999999);
-        
-        // 3. Gabungkan Format: {name}-{random}-valselt-id
         $clientId = $cleanName . '-' . $randomNum . '-valselt-id';
-        
-        // Client Secret tetap random hash panjang (keamanan)
         $clientSecret = bin2hex(random_bytes(32)); 
 
-        // Simpan ke DB
-        $stmt = $conn->prepare("INSERT INTO oauth_clients (user_id, client_id, client_secret, app_name, app_domain, redirect_uri) VALUES (?, ?, ?, ?, ?, ?)");
-        $stmt->bind_param("isssss", $user_id, $clientId, $clientSecret, $appName, $appDomain, $redirectUri);
+        // Simpan ke DB (Tanpa redirect_uri)
+        // PASTIKAN KOLOM redirect_uri DI DATABASE SUDAH DIHAPUS ATAU DIBUAT NULLABLE
+        $stmt = $conn->prepare("INSERT INTO oauth_clients (user_id, client_id, client_secret, app_name, app_domain) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("issss", $user_id, $clientId, $clientSecret, $appName, $appDomain);
 
         if ($stmt->execute()) {
             $_SESSION['popup_status'] = 'success';
             $_SESSION['popup_message'] = 'Aplikasi berhasil dibuat!';
         } else {
-            // Handle duplicate entry (meski kecil kemungkinannya dengan 6 angka random)
             if ($conn->errno == 1062) {
                  $_SESSION['popup_status'] = 'error';
                  $_SESSION['popup_message'] = 'Gagal membuat ID unik. Silakan coba lagi.';
@@ -268,37 +262,30 @@ if (isset($_POST['delete_app_id'])) {
         .client-secret-wrapper.open { opacity: 1; }
         .client-secret-wrapper.open .client-secret-box { filter: blur(0); transform: scale(1); }
         
-        /* === UPDATE: Icon-Only Toggle Secret === */
+        /* Icon-Only Toggle Secret */
         .toggle-secret {
             cursor: pointer;
-            color: #9ca3af; /* Warna abu-abu default (seperti tombol copy) */
+            color: #9ca3af; 
             font-size: 1.2rem;
-            
-            /* Layout & Centering */
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            
-            /* Style */
             text-decoration: none;
             line-height: 1;
             vertical-align: middle;
-            
-            /* Ukuran Kotak Kecil */
             width: 16px;
             height: 16px;
             border-radius: 6px;
             transition: all 0.2s ease;
-            
-            /* Posisi relatif terhadap judul */
             margin-left: 8px;
         }
         
         .toggle-secret:hover { 
             color: #000; 
+            background: #e5e7eb;
         }
         
-        /* Judul Section (Flexbox untuk sejajarkan teks & tombol) */
+        /* Secret Label Container */
         .secret-label-container {
             display: flex;
             align-items: center;
@@ -311,7 +298,6 @@ if (isset($_POST['delete_app_id'])) {
             color: #9ca3af; 
             font-weight: 700;
         }
-        /* ======================================== */
 
         /* Copy Button */
         .btn-copy {
@@ -434,13 +420,7 @@ if (isset($_POST['delete_app_id'])) {
                                         </div>
                                     </div>
                                     
-                                    <div style="margin-top:20px; border-top: 1px solid #f3f4f6; padding-top: 15px;">
-                                        <div class="section-label" style="margin-bottom:5px;">Callback URL</div>
-                                        <div style="font-size:0.9rem; color:#4b5563; font-family: monospace;">
-                                            <?php echo htmlspecialchars($app['redirect_uri']); ?>
-                                        </div>
                                     </div>
-                                </div>
 
                                 <button onclick="openDeleteAppModal('<?php echo $app['client_id']; ?>')" class="btn" style="background:#fee2e2; color:#ef4444; padding:10px; width:40px; height: 40px; border:none; cursor:pointer; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s; margin-left: 15px;">
                                     <i class='bx bx-trash' style="font-size:1.2rem;"></i>
@@ -478,12 +458,6 @@ if (isset($_POST['delete_app_id'])) {
                 <div class="form-group" style="text-align:left;">
                     <label style="font-size:0.85rem; font-weight:600; margin-bottom:5px; display:block;">App Domain</label>
                     <input type="text" name="app_domain" class="form-control" placeholder="example.com" required>
-                </div>
-
-                <div class="form-group" style="text-align:left;">
-                    <label style="font-size:0.85rem; font-weight:600; margin-bottom:5px; display:block;">Redirect URI (Callback)</label>
-                    <input type="url" name="redirect_uri" class="form-control" placeholder="https://example.com/callback" required>
-                    <small style="color:var(--text-muted); font-size:0.75rem;">Must be HTTPS and exact match.</small>
                 </div>
 
                 <div style="display:flex; gap:10px; margin-top:20px;">
@@ -569,20 +543,16 @@ if (isset($_POST['delete_app_id'])) {
             setTimeout(() => el.style.display = 'none', 300);
         }
 
-        // === FUNGSI BUKA MODAL DELETE ===
         function openDeleteAppModal(clientId) {
             document.getElementById('delete_target_id').value = clientId;
             openModal('modalDeleteApp');
         }
-        // =================================
 
-        // UPDATE: Toggle Secret (Icon Only, Target by ID)
         function toggleSecret(btn, wrapperId) {
             const wrapper = document.getElementById(wrapperId);
             const isOpen = wrapper.classList.contains('open');
             
             if (isOpen) {
-                // CLOSE
                 wrapper.style.height = wrapper.scrollHeight + "px";
                 wrapper.offsetHeight; 
                 wrapper.classList.remove('open'); 
@@ -592,17 +562,14 @@ if (isset($_POST['delete_app_id'])) {
                     wrapper.style.opacity = "0";
                 });
                 
-                // Ubah ikon jadi mata tertutup (Hide)
                 btn.innerHTML = "<i class='bx bx-hide'></i>";
 
             } else {
-                // OPEN
                 wrapper.classList.add("open");
                 const targetHeight = wrapper.scrollHeight;
                 wrapper.style.height = targetHeight + "px";
                 wrapper.style.opacity = "1";
                 
-                // Ubah ikon jadi mata terbuka (Show)
                 btn.innerHTML = "<i class='bx bx-show'></i>";
             }
         }
