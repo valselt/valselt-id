@@ -68,7 +68,6 @@ if (isset($_POST['delete_app_id'])) {
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
-        /* Body Putih */
         body {
             background: #ffffff !important; 
         }
@@ -106,7 +105,7 @@ if (isset($_POST['delete_app_id'])) {
             box-shadow: 0 6px 15px rgba(0,0,0,0.2);
         }
 
-        /* --- PERUBAHAN DISINI: Animasi Ring Profile Ungu --- */
+        /* Animasi Ring Profile Ungu */
         .nav-profile {
             width: 42px;
             height: 42px;
@@ -120,32 +119,22 @@ if (isset($_POST['delete_app_id'])) {
             cursor: default;
         }
 
-        /* Elemen Gradient Berputar di Belakang */
         .nav-profile::before {
             content: "";
             position: absolute;
-            inset: -3px; /* Mengatur ketebalan ring */
+            inset: -3px; 
             border-radius: 50%;
-            
-            /* UPDATE: Gradient Aksen Ungu */
             background: conic-gradient(
-                #4c1d95, /* Purple gelap */
-                #8b5cf6, /* Violet terang */
-                #d946ef, /* Fuchsia accent */
-                #8b5cf6, /* Violet terang */
-                #4c1d95  /* Loop kembali ke Purple gelap agar mulus */
+                #4c1d95, #8b5cf6, #d946ef, #8b5cf6, #4c1d95 
             );
-            
-            /* Animasi Putar Saja */
             animation: spin-ring 3s linear infinite; 
             z-index: -1;
         }
 
-        /* Layer Putih Pemisah antara Ring dan Foto */
         .nav-profile::after {
             content: "";
             position: absolute;
-            inset: 2px; /* Jarak antara ring warna dan foto */
+            inset: 2px;
             background: white;
             border-radius: 50%;
             z-index: -1;
@@ -155,7 +144,6 @@ if (isset($_POST['delete_app_id'])) {
             from { transform: rotate(0deg); }
             to   { transform: rotate(360deg); }
         }
-        /* -------------------------------------------------- */
 
         .nav-profile img, .nav-placeholder {
             width: 100%;
@@ -228,7 +216,7 @@ if (isset($_POST['delete_app_id'])) {
             display: inline-flex;
             align-items: center;
             gap: 5px;
-            text-decoration: underline;
+            text-decoration: none;
         }
         .toggle-secret:hover { color: #000; }
     </style>
@@ -285,16 +273,25 @@ if (isset($_POST['delete_app_id'])) {
                         
                         if ($q_apps && $q_apps->num_rows > 0):
                             while($app = $q_apps->fetch_assoc()):
+                                
+                                // --- FAVICON LOGIC DISINI ---
+                                $appDomain = htmlspecialchars($app['app_domain']);
+                                $directFavicon = "https://" . $appDomain . "/favicon.ico?v=" . time();
+                                $backupFavicon = "https://www.google.com/s2/favicons?domain=" . $appDomain . "&sz=64";
                         ?>
                             <div class="app-card">
                                 <div class="app-info" style="flex: 1;">
                                     <div style="display:flex; align-items:center; gap:15px; margin-bottom: 20px;">
-                                        <div style="width:48px; height:48px; background:#000; color:#fff; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size: 1.5rem;">
-                                            <i class='bx bx-cube-alt'></i>
+                                        <div style="width:48px; height:48px; background:#ffffff; border:1px solid #e5e7eb; border-radius:12px; display:flex; align-items:center; justify-content:center; overflow:hidden;">
+                                            <img src="<?php echo $directFavicon; ?>" 
+                                                 alt="Icon" 
+                                                 style="width:28px; height:28px; object-fit:contain;"
+                                                 onerror="this.onerror=null; this.src='<?php echo $backupFavicon; ?>';">
                                         </div>
+
                                         <div>
                                             <h4><?php echo htmlspecialchars($app['app_name']); ?></h4>
-                                            <p style="color: #2563eb;"><?php echo htmlspecialchars($app['app_domain']); ?></p>
+                                            <p style="color: #2563eb;"><?php echo $appDomain; ?></p>
                                         </div>
                                     </div>
 
