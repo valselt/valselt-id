@@ -20,11 +20,7 @@ if (isset($_POST['create_app'])) {
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Semua field wajib diisi!';
     } else {
-        // --- GOLDEN RATIO GENERATION ---
-        // Client Secret = 32 bytes (64 karakter Hex)
-        // Client ID     = 20 bytes (40 karakter Hex)
-        // Rasio: 40 / 64 = 0.625 (Mendekati 0.618 Golden Ratio)
-        
+        // GOLDEN RATIO GENERATION
         $clientId = bin2hex(random_bytes(20)); // 40 chars
         $clientSecret = bin2hex(random_bytes(32)); // 64 chars
 
@@ -199,24 +195,20 @@ if (isset($_POST['delete_app_id'])) {
         .app-info h4 { margin: 0 0 5px 0; font-size: 1.1rem; font-weight: 700; }
         .app-info p { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
         
-        /* === UPDATE: Golden Ratio Width (61.8%) === */
-        
+        /* Golden Ratio Width */
         .code-display-wrapper {
             display: inline-flex;
             align-items: center;
-            justify-content: space-between; /* Agar tombol copy di ujung */
+            justify-content: space-between;
             gap: 8px;
             background: #f3f4f6;
             padding: 8px 12px;
             border-radius: 6px;
             border: 1px solid #e5e7eb;
-            
-            /* GOLDEN RATIO WIDTH */
             width: 61.8%; 
-            min-width: 250px; /* Fallback mobile */
+            min-width: 250px;
             box-sizing: border-box;
         }
-        
         .code-text {
             font-family: monospace;
             font-size: 0.9rem;
@@ -225,14 +217,12 @@ if (isset($_POST['delete_app_id'])) {
             text-overflow: ellipsis;
         }
 
-        /* Client Secret Wrapper */
+        /* Secret Box */
         .client-secret-wrapper {
             height: 0;           
             opacity: 0;          
             overflow: hidden;    
             transition: height 0.35s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.35s ease-in-out;
-            
-            /* GOLDEN RATIO WIDTH */
             width: 61.8%;
             min-width: 250px;
         }
@@ -246,32 +236,20 @@ if (isset($_POST['delete_app_id'])) {
             margin-top: 10px;
             border: 1px solid #e5e7eb;
             color: #b91c1c;
-            
-            /* Blur & Scale Transition */
             filter: blur(8px);
             transform: scale(0.95);
             transform-origin: top left;
             transition: filter 0.35s ease, transform 0.35s ease;
-
-            /* Flexbox */
             display: flex;
             justify-content: space-between;
             align-items: center;
             gap: 10px;
         }
         
-        .client-secret-box span {
-            word-break: break-all;
-        }
+        .client-secret-box span { word-break: break-all; }
 
-        .client-secret-wrapper.open {
-            opacity: 1;
-        }
-        
-        .client-secret-wrapper.open .client-secret-box {
-            filter: blur(0);
-            transform: scale(1);
-        }
+        .client-secret-wrapper.open { opacity: 1; }
+        .client-secret-wrapper.open .client-secret-box { filter: blur(0); transform: scale(1); }
         
         .toggle-secret {
             cursor: pointer;
@@ -279,13 +257,34 @@ if (isset($_POST['delete_app_id'])) {
             font-size: 0.85rem;
             font-weight: 600;
             margin-top: 8px;
+            
+            /* Layout Alignment */
             display: inline-flex;
             align-items: center;
-            gap: 5px;
+            justify-content: center;
+            gap: 6px;
+            
+            /* Text Style */
             text-decoration: none;
-            transition: color 0.2s;
+            line-height: 1;
+            vertical-align: middle;
+            
+            /* --- UPDATE: Tampilan Tombol --- */
+            padding: 8px 12px;       /* Memberikan ruang di dalam */
+            border-radius: 8px;      /* Sudut membulat */
+            transition: all 0.2s ease; /* Animasi halus untuk background & warna */
         }
-        .toggle-secret:hover { color: #000; }
+        
+        .toggle-secret:hover { 
+            color: #000;             /* Teks jadi hitam pekat */
+            background: #e5e7eb;     /* Background abu-abu muda sesuai request */
+        }
+        
+        .toggle-secret i {
+            display: flex;
+            align-items: center;
+            font-size: 1.15em;       /* Ikon sedikit lebih besar */
+        }
 
         /* Copy Button */
         .btn-copy {
@@ -302,16 +301,10 @@ if (isset($_POST['delete_app_id'])) {
             justify-content: center;
             flex-shrink: 0;
         }
-        .btn-copy:hover {
-            color: #000;
-            background: #e5e7eb;
-        }
+        .btn-copy:hover { color: #000; background: #e5e7eb; }
         
-        /* Mobile adjustment */
         @media (max-width: 600px) {
-            .code-display-wrapper, .client-secret-wrapper {
-                width: 100%; /* Full width on mobile */
-            }
+            .code-display-wrapper, .client-secret-wrapper { width: 100%; }
         }
     </style>
 </head>
@@ -388,7 +381,6 @@ if (isset($_POST['delete_app_id'])) {
 
                                     <div style="margin-top:15px;">
                                         <div style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; font-weight: 700; margin-bottom:5px;">Client ID</div>
-                                        
                                         <div class="code-display-wrapper">
                                             <span class="code-text"><?php echo htmlspecialchars($app['client_id']); ?></span>
                                             <button onclick="copyToClipboard('<?php echo htmlspecialchars($app['client_id']); ?>', this)" class="btn-copy" title="Copy Client ID">
@@ -400,7 +392,7 @@ if (isset($_POST['delete_app_id'])) {
                                     <div style="margin-top: 15px;">
                                         <div style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; font-weight: 700; margin-bottom:5px;">Client Secret</div>
                                         <div class="toggle-secret" onclick="toggleSecret(this)">
-                                            <i class='bx bx-hide' style="display: flex; align-items: center;"></i> Show Secret
+                                            <i class='bx bx-hide'></i> Show Secret
                                         </div>
                                         
                                         <div class="client-secret-wrapper">
@@ -421,13 +413,10 @@ if (isset($_POST['delete_app_id'])) {
                                     </div>
                                 </div>
 
-                                <form method="POST" onsubmit="return confirm('Hapus aplikasi ini? Aksi ini tidak dapat dibatalkan.');" style="margin-left: 15px;">
-                                    <input type="hidden" name="delete_app_id" value="<?php echo $app['client_id']; ?>">
-                                    <button type="submit" class="btn" style="background:#fee2e2; color:#ef4444; padding:10px; width:40px; height: 40px; border:none; cursor:pointer; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
-                                        <i class='bx bx-trash' style="font-size:1.2rem;"></i>
-                                    </button>
-                                </form>
-                            </div>
+                                <button onclick="openDeleteAppModal('<?php echo $app['client_id']; ?>')" class="btn" style="background:#fee2e2; color:#ef4444; padding:10px; width:40px; height: 40px; border:none; cursor:pointer; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s; margin-left: 15px;">
+                                    <i class='bx bx-trash' style="font-size:1.2rem;"></i>
+                                </button>
+                                </div>
                         <?php 
                             endwhile; 
                         else: 
@@ -476,6 +465,25 @@ if (isset($_POST['delete_app_id'])) {
         </div>
     </div>
 
+    <div class="popup-overlay" id="modalDeleteApp" style="display:none; opacity:0; transition: opacity 0.3s;">
+        <div class="popup-box">
+            <div class="popup-icon-box error">
+                <i class='bx bx-trash'></i>
+            </div>
+            
+            <h3 class="popup-title">Delete Application?</h3>
+            <p class="popup-message">Are you sure you want to delete this app? Any active connections will be revoked.</p>
+            
+            <div style="display:flex; gap:10px; margin-top:20px;">
+                <button type="button" onclick="closeModal('modalDeleteApp')" class="popup-btn" style="background:#f3f4f6; color:#111;">Cancel</button>
+                
+                <form method="POST" style="width:100%; margin:0;">
+                    <input type="hidden" name="delete_app_id" id="delete_target_id">
+                    <button type="submit" class="popup-btn error">Yes, Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
     <script>
         function toggleAccordion(headerId) {
             const header = document.getElementById(headerId);
@@ -530,6 +538,13 @@ if (isset($_POST['delete_app_id'])) {
             box.style.transform = 'scale(0.95) translateY(10px)';
             setTimeout(() => el.style.display = 'none', 300);
         }
+
+        // === FUNGSI BUKA MODAL DELETE ===
+        function openDeleteAppModal(clientId) {
+            document.getElementById('delete_target_id').value = clientId;
+            openModal('modalDeleteApp');
+        }
+        // =================================
 
         function toggleSecret(el) {
             const wrapper = el.nextElementSibling;
