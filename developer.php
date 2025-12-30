@@ -20,7 +20,12 @@ if (isset($_POST['create_app'])) {
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Semua field wajib diisi!';
     } else {
-        $clientId = bin2hex(random_bytes(16)); // 32 chars
+        // --- GOLDEN RATIO GENERATION ---
+        // Client Secret = 32 bytes (64 karakter Hex)
+        // Client ID     = 20 bytes (40 karakter Hex)
+        // Rasio: 40 / 64 = 0.625 (Mendekati 0.618 Golden Ratio)
+        
+        $clientId = bin2hex(random_bytes(20)); // 40 chars
         $clientSecret = bin2hex(random_bytes(32)); // 64 chars
 
         $stmt = $conn->prepare("INSERT INTO oauth_clients (user_id, client_id, client_secret, app_name, app_domain, redirect_uri) VALUES (?, ?, ?, ?, ?, ?)");
@@ -88,8 +93,8 @@ if (isset($_POST['delete_app_id'])) {
         /* Tombol Home Hitam */
         .btn-home {
             text-decoration: none;
-            color: #ffffff; /* Teks Putih */
-            background: #000000; /* BG Hitam */
+            color: #ffffff; 
+            background: #000000;
             font-weight: 600;
             display: flex;
             align-items: center;
@@ -194,6 +199,44 @@ if (isset($_POST['delete_app_id'])) {
         .app-info h4 { margin: 0 0 5px 0; font-size: 1.1rem; font-weight: 700; }
         .app-info p { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
         
+        /* === UPDATE: Golden Ratio Width (61.8%) === */
+        
+        .code-display-wrapper {
+            display: inline-flex;
+            align-items: center;
+            justify-content: space-between; /* Agar tombol copy di ujung */
+            gap: 8px;
+            background: #f3f4f6;
+            padding: 8px 12px;
+            border-radius: 6px;
+            border: 1px solid #e5e7eb;
+            
+            /* GOLDEN RATIO WIDTH */
+            width: 61.8%; 
+            min-width: 250px; /* Fallback mobile */
+            box-sizing: border-box;
+        }
+        
+        .code-text {
+            font-family: monospace;
+            font-size: 0.9rem;
+            color: #374151;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        /* Client Secret Wrapper */
+        .client-secret-wrapper {
+            height: 0;           
+            opacity: 0;          
+            overflow: hidden;    
+            transition: height 0.35s cubic-bezier(0.4, 0.0, 0.2, 1), opacity 0.35s ease-in-out;
+            
+            /* GOLDEN RATIO WIDTH */
+            width: 61.8%;
+            min-width: 250px;
+        }
+        
         .client-secret-box {
             background: #f9fafb;
             padding: 12px;
@@ -202,9 +245,32 @@ if (isset($_POST['delete_app_id'])) {
             font-size: 0.9rem;
             margin-top: 10px;
             border: 1px solid #e5e7eb;
-            word-break: break-all;
-            display: none;
             color: #b91c1c;
+            
+            /* Blur & Scale Transition */
+            filter: blur(8px);
+            transform: scale(0.95);
+            transform-origin: top left;
+            transition: filter 0.35s ease, transform 0.35s ease;
+
+            /* Flexbox */
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .client-secret-box span {
+            word-break: break-all;
+        }
+
+        .client-secret-wrapper.open {
+            opacity: 1;
+        }
+        
+        .client-secret-wrapper.open .client-secret-box {
+            filter: blur(0);
+            transform: scale(1);
         }
         
         .toggle-secret {
@@ -217,8 +283,36 @@ if (isset($_POST['delete_app_id'])) {
             align-items: center;
             gap: 5px;
             text-decoration: none;
+            transition: color 0.2s;
         }
         .toggle-secret:hover { color: #000; }
+
+        /* Copy Button */
+        .btn-copy {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: #9ca3af;
+            font-size: 1.2rem;
+            padding: 4px;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .btn-copy:hover {
+            color: #000;
+            background: #e5e7eb;
+        }
+        
+        /* Mobile adjustment */
+        @media (max-width: 600px) {
+            .code-display-wrapper, .client-secret-wrapper {
+                width: 100%; /* Full width on mobile */
+            }
+        }
     </style>
 </head>
 <body>
@@ -265,7 +359,6 @@ if (isset($_POST['delete_app_id'])) {
 
                     <div class="app-list">
                         <?php
-                        // Filter berdasarkan User ID
                         $stmt = $conn->prepare("SELECT * FROM oauth_clients WHERE user_id = ?");
                         $stmt->bind_param("i", $user_id);
                         $stmt->execute();
@@ -273,8 +366,6 @@ if (isset($_POST['delete_app_id'])) {
                         
                         if ($q_apps && $q_apps->num_rows > 0):
                             while($app = $q_apps->fetch_assoc()):
-                                
-                                // --- FAVICON LOGIC DISINI ---
                                 $appDomain = htmlspecialchars($app['app_domain']);
                                 $directFavicon = "https://" . $appDomain . "/favicon.ico?v=" . time();
                                 $backupFavicon = "https://www.google.com/s2/favicons?domain=" . $appDomain . "&sz=64";
@@ -297,18 +388,28 @@ if (isset($_POST['delete_app_id'])) {
 
                                     <div style="margin-top:15px;">
                                         <div style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; font-weight: 700; margin-bottom:5px;">Client ID</div>
-                                        <div style="font-family:monospace; background:#f3f4f6; padding:8px 12px; border-radius:6px; display:inline-block; font-size: 0.9rem; color: #374151; border: 1px solid #e5e7eb;">
-                                            <?php echo htmlspecialchars($app['client_id']); ?>
+                                        
+                                        <div class="code-display-wrapper">
+                                            <span class="code-text"><?php echo htmlspecialchars($app['client_id']); ?></span>
+                                            <button onclick="copyToClipboard('<?php echo htmlspecialchars($app['client_id']); ?>', this)" class="btn-copy" title="Copy Client ID">
+                                                <i class='bx bx-copy'></i>
+                                            </button>
                                         </div>
                                     </div>
                                     
                                     <div style="margin-top: 15px;">
                                         <div style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; font-weight: 700; margin-bottom:5px;">Client Secret</div>
                                         <div class="toggle-secret" onclick="toggleSecret(this)">
-                                            <i class='bx bx-hide'></i> Show Secret
+                                            <i class='bx bx-hide' style="display: flex; align-items: center;"></i> Show Secret
                                         </div>
-                                        <div class="client-secret-box">
-                                            <?php echo htmlspecialchars($app['client_secret']); ?>
+                                        
+                                        <div class="client-secret-wrapper">
+                                            <div class="client-secret-box">
+                                                <span><?php echo htmlspecialchars($app['client_secret']); ?></span>
+                                                <button onclick="copyToClipboard('<?php echo htmlspecialchars($app['client_secret']); ?>', this)" class="btn-copy" title="Copy Client Secret">
+                                                    <i class='bx bx-copy'></i>
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                     
@@ -410,7 +511,6 @@ if (isset($_POST['delete_app_id'])) {
             }
         }
 
-        // Modal Logic
         function openModal(id) {
             const el = document.getElementById(id);
             const box = el.querySelector('.popup-box');
@@ -432,16 +532,47 @@ if (isset($_POST['delete_app_id'])) {
         }
 
         function toggleSecret(el) {
-            const secretBox = el.nextElementSibling;
-            const icon = el.querySelector('i');
+            const wrapper = el.nextElementSibling;
+            const isOpen = wrapper.classList.contains('open');
             
-            if (secretBox.style.display === 'block') {
-                secretBox.style.display = 'none';
+            if (isOpen) {
+                wrapper.style.height = wrapper.scrollHeight + "px";
+                wrapper.offsetHeight; 
+                wrapper.classList.remove('open'); 
+
+                requestAnimationFrame(() => {
+                    wrapper.style.height = "0px";
+                    wrapper.style.opacity = "0";
+                });
+                
                 el.innerHTML = "<i class='bx bx-hide'></i> Show Secret";
+
             } else {
-                secretBox.style.display = 'block';
+                wrapper.classList.add("open");
+                const targetHeight = wrapper.scrollHeight;
+                wrapper.style.height = targetHeight + "px";
+                wrapper.style.opacity = "1";
+
                 el.innerHTML = "<i class='bx bx-show'></i> Hide Secret";
             }
+        }
+
+        function copyToClipboard(text, btn) {
+            navigator.clipboard.writeText(text).then(() => {
+                const originalHTML = btn.innerHTML;
+                btn.innerHTML = "<i class='bx bx-check'></i>";
+                btn.style.color = "#166534"; 
+                btn.style.background = "#dcfce7"; 
+
+                setTimeout(() => {
+                    btn.innerHTML = originalHTML;
+                    btn.style.color = "";
+                    btn.style.background = "";
+                }, 2000);
+            }).catch(err => {
+                console.error('Gagal menyalin: ', err);
+                alert("Gagal menyalin teks.");
+            });
         }
     </script>
     

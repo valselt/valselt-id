@@ -1079,7 +1079,7 @@ if (isset($_POST['clear_activity_logs'])) {
                                     <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Connect Your Apps to Valselt-ID.</p>
                                 </div>
                             </div>
-                            <a href="developer" target="_blank" style="text-decoration:none;">
+                            <a href="developer" style="text-decoration:none;">
                                 <button class="btn" style="width:auto; padding:10px; font-size:0.9rem; background:#000; color:white;">
                                     <i class='bx bx-link-external'></i>
                                 </button>
