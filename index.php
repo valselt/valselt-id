@@ -1058,6 +1058,37 @@ if (isset($_POST['clear_activity_logs'])) {
                     </div>
                 </div>
             </div>
+
+            <div id="accordionContainer" class="accordionContainer">
+                <div class="accordion-header" id="acc4-header" onclick="toggleAccordion('acc4-header')">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <i class="bx bx-code" style="font-size:1.5rem; color:var(--text-main);"></i>
+                        Developer Options
+                    </div>
+                    <i class='bx bx-chevron-right indicator'></i>
+                </div>
+                
+                <div class="accordion-content" id="acc4-content">
+                    
+                    <div class="accordion-content-inside">
+                        <div style="font-weight:600; display:flex; align-items:center; justify-content:space-between;" class="passkey-title">
+                            <div class="passkey-header" style="display:flex; flex-direction:row; align-items:center;">
+                                <i class='bx bx-shield' style="margin-right:10px; font-size:1.2rem;"></i>
+                                <div>
+                                    <h4>OAuth</h4>
+                                    <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Connect Your Apps to Valselt-ID.</p>
+                                </div>
+                            </div>
+                            <a href="developer" target="_blank" style="text-decoration:none;">
+                                <button class="btn" style="width:auto; padding:10px; font-size:0.9rem; background:#000; color:white;">
+                                    <i class='bx bx-link-external'></i>
+                                </button>
+                            </a>
+
+                        </div>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <hr style="border:0; border-top:1px solid #e5e7eb; margin:40px 0;">
