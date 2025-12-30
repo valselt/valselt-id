@@ -20,11 +20,9 @@ if (isset($_POST['create_app'])) {
         $_SESSION['popup_status'] = 'error';
         $_SESSION['popup_message'] = 'Semua field wajib diisi!';
     } else {
-        // Generate Client ID & Secret
         $clientId = bin2hex(random_bytes(16)); // 32 chars
         $clientSecret = bin2hex(random_bytes(32)); // 64 chars
 
-        // PERBAIKAN: Simpan user_id (pemilik) ke database
         $stmt = $conn->prepare("INSERT INTO oauth_clients (user_id, client_id, client_secret, app_name, app_domain, redirect_uri) VALUES (?, ?, ?, ?, ?, ?)");
         $stmt->bind_param("isssss", $user_id, $clientId, $clientSecret, $appName, $appDomain, $redirectUri);
 
@@ -44,7 +42,6 @@ if (isset($_POST['create_app'])) {
 if (isset($_POST['delete_app_id'])) {
     $clientId = $_POST['delete_app_id'];
     
-    // PERBAIKAN: Hanya hapus jika user_id cocok (Keamanan agar tidak menghapus punya orang lain)
     $stmt = $conn->prepare("DELETE FROM oauth_clients WHERE client_id = ? AND user_id = ?");
     $stmt->bind_param("si", $clientId, $user_id);
     
@@ -71,6 +68,11 @@ if (isset($_POST['delete_app_id'])) {
     <link rel="stylesheet" href="style.css?v=<?php echo filemtime('style.css'); ?>">
     <link href='https://unpkg.com/boxicons@2.1.4/css/boxicons.min.css' rel='stylesheet'>
     <style>
+        /* Body Putih */
+        body {
+            background: #ffffff !important; 
+        }
+
         /* Navbar Style */
         .dev-navbar {
             display: flex;
@@ -83,31 +85,91 @@ if (isset($_POST['delete_app_id'])) {
             top: 0;
             z-index: 100;
         }
+
+        /* Tombol Home Hitam */
         .btn-home {
             text-decoration: none;
-            color: var(--text-main);
+            color: #ffffff; /* Teks Putih */
+            background: #000000; /* BG Hitam */
             font-weight: 600;
             display: flex;
             align-items: center;
             gap: 8px;
-            padding: 8px 16px;
-            border-radius: 8px;
-            transition: 0.2s;
+            padding: 10px 20px;
+            border-radius: 30px;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.1);
         }
-        .btn-home:hover { background: #f3f4f6; }
+        .btn-home:hover { 
+            background: #333333; 
+            transform: translateY(-2px);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.2);
+        }
+
+        /* --- PERUBAHAN DISINI: Animasi Ring Profile Ungu --- */
         .nav-profile {
-            width: 40px;
-            height: 40px;
+            width: 42px;
+            height: 42px;
             border-radius: 50%;
-            overflow: hidden;
-            border: 1px solid #e5e7eb;
+            position: relative;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+            margin-left: 15px;
+            cursor: default;
         }
-        .nav-profile img { width: 100%; height: 100%; object-fit: cover; }
+
+        /* Elemen Gradient Berputar di Belakang */
+        .nav-profile::before {
+            content: "";
+            position: absolute;
+            inset: -3px; /* Mengatur ketebalan ring */
+            border-radius: 50%;
+            
+            /* UPDATE: Gradient Aksen Ungu */
+            background: conic-gradient(
+                #4c1d95, /* Purple gelap */
+                #8b5cf6, /* Violet terang */
+                #d946ef, /* Fuchsia accent */
+                #8b5cf6, /* Violet terang */
+                #4c1d95  /* Loop kembali ke Purple gelap agar mulus */
+            );
+            
+            /* Animasi Putar Saja */
+            animation: spin-ring 3s linear infinite; 
+            z-index: -1;
+        }
+
+        /* Layer Putih Pemisah antara Ring dan Foto */
+        .nav-profile::after {
+            content: "";
+            position: absolute;
+            inset: 2px; /* Jarak antara ring warna dan foto */
+            background: white;
+            border-radius: 50%;
+            z-index: -1;
+        }
+
+        @keyframes spin-ring {
+            from { transform: rotate(0deg); }
+            to   { transform: rotate(360deg); }
+        }
+        /* -------------------------------------------------- */
+
+        .nav-profile img, .nav-placeholder {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            object-fit: cover;
+            display: block;
+        }
+
         .nav-placeholder {
-            width: 100%; height: 100%;
             background: #000; color: white;
             display: flex; align-items: center; justify-content: center;
             font-weight: 600;
+            font-size: 0.9rem;
         }
 
         /* Container */
@@ -118,48 +180,60 @@ if (isset($_POST['delete_app_id'])) {
         }
         .dev-header-text {
             font-family: var(--font-serif);
-            font-size: 2rem;
-            margin-bottom: 30px;
+            font-size: 2.5rem;
+            margin-bottom: 40px;
             color: var(--text-main);
+            font-weight: 700;
+            letter-spacing: -0.5px;
         }
 
-        /* App Card Style (Mirip Passkey List) */
+        /* App Card Style */
         .app-card {
             background: white;
             border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
+            border-radius: 16px;
+            padding: 25px;
+            margin-bottom: 20px;
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
+            transition: border-color 0.2s;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.02);
         }
-        .app-info h4 { margin: 0 0 5px 0; font-size: 1rem; }
-        .app-info p { margin: 0; font-size: 0.85rem; color: var(--text-muted); }
+        .app-card:hover {
+            border-color: #d1d5db;
+        }
+        .app-info h4 { margin: 0 0 5px 0; font-size: 1.1rem; font-weight: 700; }
+        .app-info p { margin: 0; font-size: 0.9rem; color: var(--text-muted); }
         
         .client-secret-box {
             background: #f9fafb;
-            padding: 10px;
-            border-radius: 6px;
-            font-family: monospace;
-            font-size: 0.85rem;
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Courier New', Courier, monospace;
+            font-size: 0.9rem;
             margin-top: 10px;
-            border: 1px dashed #d1d5db;
+            border: 1px solid #e5e7eb;
             word-break: break-all;
-            display: none; /* Hidden by default */
+            display: none;
+            color: #b91c1c;
         }
         
         .toggle-secret {
             cursor: pointer;
-            color: var(--primary);
-            font-size: 0.8rem;
+            color: var(--text-main);
+            font-size: 0.85rem;
             font-weight: 600;
-            margin-top: 5px;
-            display: inline-block;
+            margin-top: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            text-decoration: underline;
         }
+        .toggle-secret:hover { color: #000; }
     </style>
 </head>
-<body style="background:#f9fafb;">
+<body>
 
     <nav class="dev-navbar">
         <a href="index.php" class="btn-home">
@@ -179,9 +253,11 @@ if (isset($_POST['delete_app_id'])) {
 
         <div id="accordionContainer" class="accordionContainer">
             <div class="accordion-header" id="dev1-header" onclick="toggleAccordion('dev1-header')">
-                <div style="display: flex; align-items: center; gap: 10px;">
-                    <i class='bx bx-code-alt' style="font-size:1.5rem; color:var(--text-main);"></i>
-                    OAuth Applications
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <div style="background: #eff6ff; padding: 8px; border-radius: 8px; color: #2563eb;">
+                        <i class='bx bx-code-alt' style="font-size:1.4rem;"></i>
+                    </div>
+                    <span style="font-weight: 600; font-size: 1.1rem;">OAuth Applications</span>
                 </div>
                 <i class='bx bx-chevron-right indicator'></i>
             </div>
@@ -189,19 +265,19 @@ if (isset($_POST['delete_app_id'])) {
             <div class="accordion-content" id="dev1-content">
                 <div class="accordion-content-inside">
                     
-                    <div style="margin-bottom: 20px; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
+                    <div style="margin-bottom: 25px; font-weight:600; display:flex; align-items:center; justify-content:space-between;">
                         <div>
-                            <h4>My Applications</h4>
-                            <p style="font-size:0.75rem; color:var(--text-muted); font-weight:400; margin-top:2px;">Manage Client ID & Secret for your apps.</p>
+                            <h4 style="font-size: 1rem; margin-bottom: 4px;">My Applications</h4>
+                            <p style="font-size:0.8rem; color:var(--text-muted); font-weight:400;">Manage Client ID & Secret to connect your apps.</p>
                         </div>
-                        <button onclick="openModal('modalCreateApp')" class="btn" style="width:auto; padding: 10px; font-size:0.9rem; background:#000; color:white;">
-                            <i class='bx bx-plus'></i>
+                        <button onclick="openModal('modalCreateApp')" class="btn" style="width:auto; padding: 10px 14px; font-size:0.9rem; background:#000; color:white; border-radius: 8px;">
+                            <i class='bx bx-plus' style="font-size: 1.2rem;"></i>
                         </button>
                     </div>
 
                     <div class="app-list">
                         <?php
-                        // PERBAIKAN: Hanya ambil aplikasi milik user yang sedang login
+                        // Filter berdasarkan User ID
                         $stmt = $conn->prepare("SELECT * FROM oauth_clients WHERE user_id = ?");
                         $stmt->bind_param("i", $user_id);
                         $stmt->execute();
@@ -212,37 +288,44 @@ if (isset($_POST['delete_app_id'])) {
                         ?>
                             <div class="app-card">
                                 <div class="app-info" style="flex: 1;">
-                                    <div style="display:flex; align-items:center; gap:10px;">
-                                        <div style="width:32px; height:32px; background:#dbeafe; color:#2563eb; border-radius:6px; display:flex; align-items:center; justify-content:center;">
-                                            <i class='bx bx-cube'></i>
+                                    <div style="display:flex; align-items:center; gap:15px; margin-bottom: 20px;">
+                                        <div style="width:48px; height:48px; background:#000; color:#fff; border-radius:12px; display:flex; align-items:center; justify-content:center; font-size: 1.5rem;">
+                                            <i class='bx bx-cube-alt'></i>
                                         </div>
                                         <div>
                                             <h4><?php echo htmlspecialchars($app['app_name']); ?></h4>
-                                            <p><?php echo htmlspecialchars($app['app_domain']); ?></p>
+                                            <p style="color: #2563eb;"><?php echo htmlspecialchars($app['app_domain']); ?></p>
                                         </div>
                                     </div>
 
                                     <div style="margin-top:15px;">
-                                        <div style="font-size:0.8rem; color:#6b7280; margin-bottom:2px;">Client ID</div>
-                                        <div style="font-family:monospace; background:#f3f4f6; padding:5px 8px; border-radius:4px; display:inline-block;">
+                                        <div style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; font-weight: 700; margin-bottom:5px;">Client ID</div>
+                                        <div style="font-family:monospace; background:#f3f4f6; padding:8px 12px; border-radius:6px; display:inline-block; font-size: 0.9rem; color: #374151; border: 1px solid #e5e7eb;">
                                             <?php echo htmlspecialchars($app['client_id']); ?>
                                         </div>
                                     </div>
                                     
-                                    <div class="toggle-secret" onclick="toggleSecret(this)">Show Client Secret</div>
-                                    <div class="client-secret-box">
-                                        <?php echo htmlspecialchars($app['client_secret']); ?>
+                                    <div style="margin-top: 15px;">
+                                        <div style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; font-weight: 700; margin-bottom:5px;">Client Secret</div>
+                                        <div class="toggle-secret" onclick="toggleSecret(this)">
+                                            <i class='bx bx-hide'></i> Show Secret
+                                        </div>
+                                        <div class="client-secret-box">
+                                            <?php echo htmlspecialchars($app['client_secret']); ?>
+                                        </div>
                                     </div>
                                     
-                                    <div style="margin-top:10px; font-size:0.8rem; color:#6b7280;">
-                                        <strong>Redirect URI:</strong><br>
-                                        <?php echo htmlspecialchars($app['redirect_uri']); ?>
+                                    <div style="margin-top:20px; border-top: 1px solid #f3f4f6; padding-top: 15px;">
+                                        <div style="font-size:0.75rem; text-transform:uppercase; color:#9ca3af; font-weight: 700; margin-bottom:5px;">Callback URL</div>
+                                        <div style="font-size:0.9rem; color:#4b5563; font-family: monospace;">
+                                            <?php echo htmlspecialchars($app['redirect_uri']); ?>
+                                        </div>
                                     </div>
                                 </div>
 
-                                <form method="POST" onsubmit="return confirm('Hapus aplikasi ini? Aksi ini tidak dapat dibatalkan.');">
+                                <form method="POST" onsubmit="return confirm('Hapus aplikasi ini? Aksi ini tidak dapat dibatalkan.');" style="margin-left: 15px;">
                                     <input type="hidden" name="delete_app_id" value="<?php echo $app['client_id']; ?>">
-                                    <button type="submit" class="btn" style="background:transparent; color:#ef4444; padding:5px; width:auto; border:none; cursor:pointer;">
+                                    <button type="submit" class="btn" style="background:#fee2e2; color:#ef4444; padding:10px; width:40px; height: 40px; border:none; cursor:pointer; border-radius: 8px; display: flex; align-items: center; justify-content: center; transition: 0.2s;">
                                         <i class='bx bx-trash' style="font-size:1.2rem;"></i>
                                     </button>
                                 </form>
@@ -251,8 +334,9 @@ if (isset($_POST['delete_app_id'])) {
                             endwhile; 
                         else: 
                         ?>
-                            <div style="text-align:center; padding:30px; color:var(--text-muted); border: 1px dashed #e5e7eb; border-radius:12px;">
-                                Belum ada aplikasi yang dibuat.
+                            <div style="text-align:center; padding:40px; color:var(--text-muted); border: 2px dashed #e5e7eb; border-radius:16px; background: #fafafa;">
+                                <i class='bx bx-code-block' style="font-size: 3rem; margin-bottom: 10px; color: #d1d5db;"></i>
+                                <p>You haven't created any applications yet.</p>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -295,7 +379,6 @@ if (isset($_POST['delete_app_id'])) {
     </div>
 
     <script>
-        // Copy fungsi Accordion dari index.php
         function toggleAccordion(headerId) {
             const header = document.getElementById(headerId);
             const contentId = headerId.replace('header', 'content');
@@ -353,12 +436,14 @@ if (isset($_POST['delete_app_id'])) {
 
         function toggleSecret(el) {
             const secretBox = el.nextElementSibling;
+            const icon = el.querySelector('i');
+            
             if (secretBox.style.display === 'block') {
                 secretBox.style.display = 'none';
-                el.innerText = 'Show Client Secret';
+                el.innerHTML = "<i class='bx bx-hide'></i> Show Secret";
             } else {
                 secretBox.style.display = 'block';
-                el.innerText = 'Hide Client Secret';
+                el.innerHTML = "<i class='bx bx-show'></i> Hide Secret";
             }
         }
     </script>
